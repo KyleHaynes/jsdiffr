@@ -33,6 +33,43 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
   body
 }
 
+#' Show a vector diff as HTML in the browser
+#'
+#' Compares `vec_1` and `vec_2` element-by-element, rendering one row of
+#' inline highlighted diff per pair. Uses [diff_chars()] (character-level) by
+#' default. Opens the result in the system browser.
+#'
+#' @param vec_1,vec_2 Character vectors of equal length to compare.
+#' @param method Diff function applied per element pair. Defaults to [diff_chars].
+#' @param view If `TRUE`, write to a temp file and open in the browser.
+#' @return The HTML string, invisibly when `view = TRUE`.
+#' @examples
+#' diff_html(c("a", "b", "c"), c("a", "B", "c"))
+#' @export
+diff_html <- function(vec_1, vec_2, method = diff_chars, view = TRUE) {
+  stopifnot(length(vec_1) == length(vec_2))
+  rows <- vapply(seq_along(vec_1), function(i) {
+    diff_to_html(method(vec_1[i], vec_2[i]), wrap = FALSE, pre = FALSE)
+  }, character(1))
+  body <- paste0('<div class="diff-row">', rows, "</div>", collapse = "\n")
+  css <- paste0(
+    diff_css_default(),
+    "\n.diff-row{padding:2px 6px;border-bottom:1px solid #eee;font-family:ui-monospace,monospace;white-space:pre-wrap}"
+  )
+  html <- paste0(
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><style>', css,
+    "</style></head><body>", body, "</body></html>"
+  )
+  if (view) {
+    tmp <- tempfile(fileext = ".html")
+    writeLines(html, tmp)
+    browseURL(tmp)
+    invisible(html)
+  } else {
+    html
+  }
+}
+
 #' Default CSS for [diff_to_html()] output
 #'
 #' @return A length-1 character string of CSS rules.
