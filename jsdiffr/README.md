@@ -39,6 +39,54 @@ Each function returns a `data.table` of change objects with columns `value`,
 `added`, `removed`, and `count`. Printing a diff colours additions green and
 deletions red.
 
+## HTML output and Shiny
+
+`diff_to_html()` renders a diff as HTML spans (`.jsdiff-added` / `.jsdiff-removed`),
+and `diff_css_default()` returns matching CSS. This makes it easy to show a diff
+in an R Markdown report or a Shiny app.
+
+```r
+diff_to_html(diff_words("the cat sat", "the dog sat"))
+#> <div class="jsdiff"><pre class="jsdiff-pre">
+#>   <span class="jsdiff-context">the </span>
+#>   <span class="jsdiff-removed">cat</span>
+#>   <span class="jsdiff-added">dog</span>
+#>   <span class="jsdiff-context"> sat</span>
+#> </pre></div>
+#> (shown indented here for readability; the real output is a single line)
+```
+
+A minimal Shiny app that diffs two text areas live:
+
+```r
+library(shiny)
+library(jsdiffr)
+
+ui <- fluidPage(
+  tags$head(tags$style(HTML(diff_css_default()))),
+  titlePanel("jsdiffr live diff"),
+  fluidRow(
+    column(6, textAreaInput("old", "Old", "the quick brown fox\njumps over\n",
+                            rows = 8, width = "100%")),
+    column(6, textAreaInput("new", "New", "the slow brown fox\nleaps over\n",
+                            rows = 8, width = "100%"))
+  ),
+  hr(),
+  uiOutput("diff")
+)
+
+server <- function(input, output) {
+  output$diff <- renderUI({
+    HTML(diff_to_html(diff_lines(input$old, input$new)))
+  })
+}
+
+shinyApp(ui, server)
+```
+
+Use `diff_words()` / `diff_chars()` instead of `diff_lines()` for word- or
+character-level highlighting.
+
 ## Features
 
 * **Diffing**: `diff_chars`, `diff_words`, `diff_words_with_space`,
