@@ -2,6 +2,26 @@
 # diff functions. Mirrors jsdiff's array-of-change-objects, but materialised as a
 # data.table with columns: value, added, removed, count.
 
+#' Change objects returned by the diff functions
+#'
+#' All `diff_*()` functions return a `jsdiff_changes` object: a [data.table][data.table::data.table]
+#' (subclassed) with one row per change and the columns below. It has a coloured
+#' [print][print.jsdiff_changes] method and can be coerced with
+#' [as.data.table][as.data.table.jsdiff_changes].
+#'
+#' \describe{
+#'   \item{`value`}{The text (or, for [diff_arrays()], the list of elements) of
+#'     the change. For unchanged and added blocks this comes from the new input;
+#'     for removed blocks, from the old input.}
+#'   \item{`added`}{`TRUE` if the block was inserted in the new input.}
+#'   \item{`removed`}{`TRUE` if the block was deleted from the old input.}
+#'   \item{`count`}{The number of tokens (characters, words, lines, ...) in the
+#'     block.}
+#' }
+#'
+#' @name jsdiff_changes
+NULL
+
 new_changes <- function(value, added, removed, count, value_type = "character",
                         mode = "chars") {
   dt <- data.table::data.table(
@@ -68,6 +88,7 @@ format.jsdiff_changes <- function(x, color = supports_color(), ...) {
   paste0(pieces, collapse = "")
 }
 
+#' @rdname format.jsdiff_changes
 #' @export
 print.jsdiff_changes <- function(x, color = supports_color(), ...) {
   vt <- attr(x, "jsdiffr_value_type")
@@ -83,7 +104,7 @@ print.jsdiff_changes <- function(x, color = supports_color(), ...) {
 #' @param x A `jsdiff_changes` object.
 #' @param ... Unused.
 #' @return A `data.table` with columns `value`, `added`, `removed`, `count`.
-#' @export
+#' @exportS3Method data.table::as.data.table
 as.data.table.jsdiff_changes <- function(x, ...) {
   dt <- data.table::copy(x)
   data.table::setattr(dt, "class", c("data.table", "data.frame"))

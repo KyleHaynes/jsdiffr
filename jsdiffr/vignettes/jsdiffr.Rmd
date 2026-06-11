@@ -1,0 +1,124 @@
+---
+title: "Diffing text and sequences with jsdiffr"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Diffing text and sequences with jsdiffr}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r setup}
+library(jsdiffr)
+```
+
+`jsdiffr` is a faithful R port of the
+[jsdiff](https://github.com/kpdecker/jsdiff) JavaScript library. It computes the
+difference between two pieces of text (or two sequences) using Myers' O(ND)
+algorithm, implemented in C++ for speed on large inputs.
+
+## The basics
+
+Every diff function takes two inputs and returns a `data.table` of *change
+objects* with four columns: `value`, `added`, `removed`, and `count`.
+
+```{r}
+d <- diff_chars("the quick brown fox", "the quiet brown ox")
+d
+as.data.frame(d)
+```
+
+You can diff at several granularities:
+
+```{r}
+diff_words("The quick brown fox", "The slow brown fox")
+diff_lines("alpha\nbeta\ngamma\n", "alpha\nBETA\ngamma\n")
+diff_sentences("Hello world. Foo bar.", "Hello world. Baz bar.")
+```
+
+`diff_arrays()` compares arbitrary sequences; its `value` column is a list of
+the sub-sequences for each change:
+
+```{r}
+da <- diff_arrays(c("a", "b", "c"), c("a", "c", "d"))
+da$value
+```
+
+## Printing and colours
+
+Printing a diff in an interactive console shows additions in green and deletions
+in red. You can force this on or off:
+
+```{r}
+cat(format(diff_words("the cat sat", "the dog sat"), color = FALSE), "\n")
+```
+
+## Patches
+
+The full unified-diff patch suite is available:
+
+```{r}
+old <- "line one\nline two\nline three\n"
+new <- "line one\nline 2\nline three\nline four\n"
+patch <- create_patch("example.txt", old, new)
+cat(patch)
+```
+
+Patches can be parsed, applied, reversed, and re-formatted:
+
+```{r}
+identical(apply_patch(old, patch), new)
+
+reversed <- format_patch(reverse_patch(parse_patch(patch)))
+identical(apply_patch(new, reversed), old)
+```
+
+`apply_patch()` supports fuzzy matching via `fuzz_factor` and automatically
+reconciles Unix/Windows line endings.
+
+## HTML output for Shiny / R Markdown
+
+`diff_to_html()` renders a diff as HTML spans you can drop into a Shiny app or
+report. Pair it with `diff_css_default()` for styling.
+
+```{r}
+html <- diff_to_html(diff_words("the cat sat", "the dog sat"))
+substr(html, 1, 120)
+```
+
+In a Shiny app:
+
+```r
+library(shiny)
+ui <- fluidPage(
+  tags$head(tags$style(HTML(diff_css_default()))),
+  uiOutput("diff")
+)
+server <- function(input, output) {
+  output$diff <- renderUI({
+    HTML(diff_to_html(diff_lines(old_text(), new_text())))
+  })
+}
+```
+
+## Converters
+
+Changes can be serialised to XML or to Google's diff-match-patch format:
+
+```{r}
+convert_changes_to_xml(diff_chars("abc", "abd"))
+str(convert_changes_to_dmp(diff_chars("abc", "abd")))
+```
+
+## Differences from jsdiff
+
+* The API uses `snake_case`; `camelCase` aliases (`diffChars`, `createPatch`,
+  ...) are provided for users porting JavaScript code.
+* There is no asynchronous `callback` mode; the universal `max_edit_length` and
+  `timeout` options are supported.
+* `diff_words()`'s `intlSegmenter` option is not supported (R has no
+  `Intl.Segmenter`).
+```

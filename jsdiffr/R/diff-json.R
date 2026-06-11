@@ -13,6 +13,7 @@
 #'   character strings of pre-serialised JSON.
 #' @param undefined_replacement Value substituted for `NULL`/`NA` leaves during
 #'   serialisation (jsdiff's `undefinedReplacement`). Defaults to JSON `null`.
+#' @param strip_trailing_cr If `TRUE`, normalise `\r\n` to `\n` before diffing.
 #' @inheritParams diff_chars
 #' @return A [jsdiff_changes] object.
 #' @examples

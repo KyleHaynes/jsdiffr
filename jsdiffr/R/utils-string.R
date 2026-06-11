@@ -4,12 +4,12 @@
 
 # Number of leading characters shared by two strings.
 longest_common_prefix <- function(str1, str2) {
-  a <- substring(str1, seq_len(nchar(str1)), seq_len(nchar(str1)))
-  b <- substring(str2, seq_len(nchar(str2)), seq_len(nchar(str2)))
-  n <- min(length(a), length(b))
-  i <- 0L
-  while (i < n && a[i + 1L] == b[i + 1L]) i <- i + 1L
-  substr(str1, 1L, i)
+  n <- min(nchar(str1), nchar(str2))
+  if (n == 0L) return("")
+  a <- substring(str1, 1:n, 1:n)
+  b <- substring(str2, 1:n, 1:n)
+  mism <- which(a != b)
+  if (length(mism)) substr(str1, 1L, mism[1L] - 1L) else substr(str1, 1L, n)
 }
 
 longest_common_suffix <- function(str1, str2) {
@@ -46,9 +46,10 @@ remove_suffix <- function(string, old_suffix) replace_suffix(string, old_suffix,
 
 # Length of the longest suffix of string1 that is a prefix of string2.
 overlap_count <- function(a, b) {
-  ac <- substring(a, seq_len(nchar(a)), seq_len(nchar(a)))
-  bc <- substring(b, seq_len(nchar(b)), seq_len(nchar(b)))
-  la <- length(ac); lb <- length(bc)
+  if (!nzchar(a) || !nzchar(b)) return(0L)
+  la <- nchar(a); lb <- nchar(b)
+  ac <- substring(a, 1:la, 1:la)
+  bc <- substring(b, 1:lb, 1:lb)
   startA <- if (la > lb) la - lb else 0L
   endB <- if (la < lb) la else lb
   if (endB == 0L) return(0L)

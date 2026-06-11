@@ -36,7 +36,8 @@ extended_word_chars <- paste0(
 )
 
 tokenize_words <- function(value) {
-  pattern <- paste0("(*UCP)[", extended_word_chars, "]+|\\s+|[^",
+  value <- enc2utf8(value)
+  pattern <- paste0("(*UTF)(*UCP)[", extended_word_chars, "]+|\\s+|[^",
                     extended_word_chars, "]")
   parts <- regmatches(value, gregexpr(pattern, value, perl = TRUE))[[1]]
   if (!length(parts)) return(character(0))
@@ -68,7 +69,8 @@ tokenize_words <- function(value) {
 }
 
 tokenize_words_with_space <- function(value) {
-  pattern <- paste0("(*UCP)(\\r?\\n)|[", extended_word_chars,
+  value <- enc2utf8(value)
+  pattern <- paste0("(*UTF)(*UCP)(\\r?\\n)|[", extended_word_chars,
                     "]+|[^\\S\\n\\r]+|[^", extended_word_chars, "]")
   m <- regmatches(value, gregexpr(pattern, value, perl = TRUE))[[1]]
   if (!length(m)) character(0) else m

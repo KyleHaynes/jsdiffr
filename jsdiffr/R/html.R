@@ -1,0 +1,48 @@
+# HTML rendering helpers for use in reports and shiny apps. Not part of jsdiff
+# itself, but a thin convenience layer over the change objects.
+
+#' Render change objects as an HTML string
+#'
+#' Wraps additions in `<span class="jsdiff-added">` and deletions in
+#' `<span class="jsdiff-removed">`. Suitable for embedding in a 'shiny' app via
+#' [shiny::renderUI()] / [shiny::HTML()] or in an R Markdown document. Use
+#' [diff_css_default()] to obtain matching CSS.
+#'
+#' @param changes A `jsdiff_changes` object (from a string-based diff).
+#' @param wrap If `TRUE`, wrap the output in a `<div class="jsdiff">...</div>`.
+#' @param pre If `TRUE` (default), wrap the content in `<pre>` so whitespace and
+#'   newlines are preserved (recommended for line diffs).
+#' @return A length-1 character string of HTML.
+#' @examples
+#' diff_to_html(diff_words("the cat", "the dog"))
+#' @export
+diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
+  if (identical(attr(changes, "jsdiffr_value_type"), "list")) {
+    stop("diff_to_html() requires a string-based diff, not an array diff.")
+  }
+  val <- changes$value
+  pieces <- vapply(seq_len(nrow(changes)), function(i) {
+    v <- escape_html(val[i])
+    if (changes$added[i]) paste0("<span class=\"jsdiff-added\">", v, "</span>")
+    else if (changes$removed[i]) paste0("<span class=\"jsdiff-removed\">", v, "</span>")
+    else paste0("<span class=\"jsdiff-context\">", v, "</span>")
+  }, character(1))
+  body <- paste0(pieces, collapse = "")
+  if (pre) body <- paste0("<pre class=\"jsdiff-pre\">", body, "</pre>")
+  if (wrap) body <- paste0("<div class=\"jsdiff\">", body, "</div>")
+  body
+}
+
+#' Default CSS for [diff_to_html()] output
+#'
+#' @return A length-1 character string of CSS rules.
+#' @export
+diff_css_default <- function() {
+  paste(
+    ".jsdiff .jsdiff-pre { margin: 0; font-family: ui-monospace, monospace; white-space: pre-wrap; }",
+    ".jsdiff-added { background-color: #e6ffed; color: #033a16; }",
+    ".jsdiff-removed { background-color: #ffebe9; color: #82071e; text-decoration: line-through; }",
+    ".jsdiff-context { color: #24292f; }",
+    sep = "\n"
+  )
+}
