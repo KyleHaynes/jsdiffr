@@ -1,0 +1,34 @@
+Package: jsdiffr
+Type: Package
+Title: Text and Sequence Diffing Ported from 'jsdiff'
+Version: 0.1.0
+Authors@R: c(
+    person("Kyle", "Haynes", email = "kyle@kylehaynes.com.au",
+           role = c("aut", "cre")),
+    person("Kevin", "Decker", role = c("aut", "cph"),
+           comment = "Author of the original 'jsdiff' JavaScript library (https://github.com/kpdecker/jsdiff)"))
+Description: A faithful R port of the 'jsdiff' JavaScript library. Computes
+    differences between two pieces of text or two sequences at the level of
+    characters, words, lines, sentences, CSS tokens, 'JSON' values, or arbitrary
+    arrays, using Myers' O(ND) difference algorithm. The core diff loop is
+    implemented in C++ for speed on large inputs. Also provides the full 'jsdiff'
+    patch suite (create, apply, parse, and reverse unified diff patches),
+    converters to XML and the Google diff-match-patch format, and helpers for
+    rendering diffs as coloured console output or HTML for use in 'shiny' apps.
+License: BSD_3_clause + file LICENSE
+Encoding: UTF-8
+URL: https://github.com/kpdecker/jsdiff
+LinkingTo: Rcpp
+Imports:
+    Rcpp,
+    data.table,
+    jsonlite
+Suggests:
+    testthat (>= 3.0.0),
+    shiny,
+    knitr,
+    rmarkdown
+RoxygenNote: 7.3.2
+Roxygen: list(markdown = TRUE)
+VignetteBuilder: knitr
+Config/testthat/edition: 3

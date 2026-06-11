@@ -1,0 +1,7 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.github$
+^tools/jsref$
+^tools$
+^scratch$
+^.*\.code-workspace$
