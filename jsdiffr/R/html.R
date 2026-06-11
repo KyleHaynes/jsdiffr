@@ -33,10 +33,31 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
   body
 }
 
-#' Show a vector diff as HTML in the browser
+# Internal: render one side of a changes object as an HTML fragment.
+# side = "left"  -> context + removed (additions suppressed)
+# side = "right" -> context + added   (removals suppressed)
+.side_html <- function(changes, side) {
+  val <- changes$value
+  pieces <- vapply(seq_len(nrow(changes)), function(i) {
+    v <- escape_html(val[i])
+    if (side == "left") {
+      if (changes$added[i])   return("")
+      if (changes$removed[i]) paste0('<span class="jsdiff-removed">', v, "</span>")
+      else                    paste0('<span class="jsdiff-context">',  v, "</span>")
+    } else {
+      if (changes$removed[i]) return("")
+      if (changes$added[i])   paste0('<span class="jsdiff-added">',   v, "</span>")
+      else                    paste0('<span class="jsdiff-context">',  v, "</span>")
+    }
+  }, character(1))
+  paste0(pieces, collapse = "")
+}
+
+#' Show a vector diff as a three-column HTML table in the browser
 #'
-#' Compares `vec_1` and `vec_2` element-by-element, rendering one row of
-#' inline highlighted diff per pair. Uses [diff_chars()] (character-level) by
+#' Compares `vec_1` and `vec_2` element-by-element, rendering one table row
+#' per pair with **Left** (original), **Right** (new), and **Changes**
+#' (inline combined diff) columns. Uses [diff_chars()] (character-level) by
 #' default. Opens the result in the system browser.
 #'
 #' @param vec_1,vec_2 Character vectors of equal length to compare.
@@ -48,18 +69,37 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
 #' @export
 diff_html <- function(vec_1, vec_2, method = diff_chars, view = TRUE) {
   stopifnot(length(vec_1) == length(vec_2))
+
   rows <- vapply(seq_along(vec_1), function(i) {
-    diff_to_html(method(vec_1[i], vec_2[i]), wrap = FALSE, pre = FALSE)
+    ch     <- method(vec_1[i], vec_2[i])
+    left   <- .side_html(ch, "left")
+    right  <- .side_html(ch, "right")
+    inline <- diff_to_html(ch, wrap = FALSE, pre = FALSE)
+    paste0("<tr><td>", left, "</td><td>", right, "</td><td>", inline, "</td></tr>")
   }, character(1))
-  body <- paste0('<div class="diff-row">', rows, "</div>", collapse = "\n")
-  css <- paste0(
-    diff_css_default(),
-    "\n.diff-row{padding:2px 6px;border-bottom:1px solid #eee;font-family:ui-monospace,monospace;white-space:pre-wrap}"
+
+  thead <- "<thead><tr><th>Left</th><th>Right</th><th>Changes</th></tr></thead>"
+  table <- paste0(
+    '<table class="jsdiff-table">', thead,
+    "<tbody>", paste0(rows, collapse = ""), "</tbody></table>"
   )
+
+  css <- paste0(
+    diff_css_default(), "\n",
+    "body{margin:16px;font-family:ui-monospace,monospace;font-size:13px}\n",
+    ".jsdiff-table{width:100%;border-collapse:collapse}\n",
+    ".jsdiff-table th,.jsdiff-table td{padding:4px 8px;border:1px solid #d0d7de;vertical-align:top;white-space:pre-wrap}\n",
+    ".jsdiff-table th{background:#f6f8fa;font-weight:600;text-align:left}\n",
+    ".jsdiff-table td:nth-child(1){background:#fff8f8}\n",
+    ".jsdiff-table td:nth-child(2){background:#f8fff8}\n",
+    ".jsdiff-table td:nth-child(3){background:#fafafa}"
+  )
+
   html <- paste0(
     '<!DOCTYPE html><html><head><meta charset="utf-8"><style>', css,
-    "</style></head><body>", body, "</body></html>"
+    "</style></head><body>", table, "</body></html>"
   )
+
   if (view) {
     tmp <- tempfile(fileext = ".html")
     writeLines(html, tmp)
