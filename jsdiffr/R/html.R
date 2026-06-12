@@ -33,21 +33,58 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
   body
 }
 
+# Internal: TRUE if every non-whitespace token in `text` is in `ignore_lc`.
+.all_ignored <- function(text, ignore_lc) {
+  words <- unlist(regmatches(text, gregexpr("\\S+", text, perl = TRUE)))
+  length(words) > 0L && all(tolower(words) %in% ignore_lc)
+}
+
 # Internal: render one side of a changes object as an HTML fragment.
 # side = "left"  -> context + removed (additions suppressed)
 # side = "right" -> context + added   (removals suppressed)
-.side_html <- function(changes, side) {
+# When ignore_lc is non-empty, changes consisting entirely of ignored words are
+# rendered as plain context on their respective side instead of highlighted.
+.side_html <- function(changes, side, ignore_lc = character(0)) {
   val <- changes$value
   pieces <- vapply(seq_len(nrow(changes)), function(i) {
-    v <- escape_html(val[i])
+    v  <- escape_html(val[i])
+    ig <- length(ignore_lc) > 0L && .all_ignored(val[i], ignore_lc)
     if (side == "left") {
       if (changes$added[i])   return("")
-      if (changes$removed[i]) paste0('<span class="jsdiff-removed">', v, "</span>")
-      else                    paste0('<span class="jsdiff-context">',  v, "</span>")
+      if (changes$removed[i]) {
+        if (ig) paste0('<span class="jsdiff-context">', v, "</span>")
+        else    paste0('<span class="jsdiff-removed">', v, "</span>")
+      } else {
+        paste0('<span class="jsdiff-context">', v, "</span>")
+      }
     } else {
       if (changes$removed[i]) return("")
-      if (changes$added[i])   paste0('<span class="jsdiff-added">',   v, "</span>")
-      else                    paste0('<span class="jsdiff-context">',  v, "</span>")
+      if (changes$added[i]) {
+        if (ig) paste0('<span class="jsdiff-context">', v, "</span>")
+        else    paste0('<span class="jsdiff-added">',   v, "</span>")
+      } else {
+        paste0('<span class="jsdiff-context">', v, "</span>")
+      }
+    }
+  }, character(1))
+  paste0(pieces, collapse = "")
+}
+
+# Internal: render the inline Changes column HTML fragment.
+# Ignored-word removals are skipped; the paired addition shows as plain context.
+.inline_html <- function(changes, ignore_lc = character(0)) {
+  val <- changes$value
+  pieces <- vapply(seq_len(nrow(changes)), function(i) {
+    v  <- escape_html(val[i])
+    ig <- length(ignore_lc) > 0L && .all_ignored(val[i], ignore_lc)
+    if (changes$removed[i]) {
+      if (ig) return("")  # skip; the added side renders as context below
+      paste0('<span class="jsdiff-removed">', v, "</span>")
+    } else if (changes$added[i]) {
+      if (ig) paste0('<span class="jsdiff-context">', v, "</span>")
+      else    paste0('<span class="jsdiff-added">',   v, "</span>")
+    } else {
+      paste0('<span class="jsdiff-context">', v, "</span>")
     }
   }, character(1))
   paste0(pieces, collapse = "")
@@ -62,19 +99,33 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
 #'
 #' @param vec_1,vec_2 Character vectors of equal length to compare.
 #' @param method Diff function applied per element pair. Defaults to [diff_chars].
+#' @param ignore_words Optional character vector of words to suppress from diff
+#'   highlighting. Changes consisting entirely of these words (case-insensitive)
+#'   are rendered as plain context rather than additions/deletions. Most useful
+#'   with `method = diff_words`.
 #' @param view If `TRUE`, write to a temp file and open in the browser.
 #' @return The HTML string, invisibly when `view = TRUE`.
 #' @examples
 #' diff_html(c("a", "b", "c"), c("a", "B", "c"))
+#'
+#' # Ignore specific words when using word-level diff
+#' diff_html(
+#'   c("The big cat sat", "foo bar"),
+#'   c("The small cat sat", "foo baz"),
+#'   method = diff_words,
+#'   ignore_words = c("big", "small")
+#' )
 #' @export
-diff_html <- function(vec_1, vec_2, method = diff_chars, view = TRUE) {
+diff_html <- function(vec_1, vec_2, method = diff_chars, ignore_words = NULL,
+                      view = TRUE) {
   stopifnot(length(vec_1) == length(vec_2))
+  ignore_lc <- tolower(ignore_words %||% character(0))
 
   rows <- vapply(seq_along(vec_1), function(i) {
     ch     <- method(vec_1[i], vec_2[i])
-    left   <- .side_html(ch, "left")
-    right  <- .side_html(ch, "right")
-    inline <- diff_to_html(ch, wrap = FALSE, pre = FALSE)
+    left   <- .side_html(ch, "left",  ignore_lc)
+    right  <- .side_html(ch, "right", ignore_lc)
+    inline <- .inline_html(ch, ignore_lc)
     paste0("<tr><td>", left, "</td><td>", right, "</td><td>", inline, "</td></tr>")
   }, character(1))
 
