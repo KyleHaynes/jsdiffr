@@ -19,7 +19,7 @@ Requires a C++ compiler (Rtools on Windows).
 
 ```r
 # install.packages("remotes")
-remotes::install_local("jsdiffr")
+remotes::install_github("KyleHaynes/anthropic_diff")
 ```
 
 ## Quick start
