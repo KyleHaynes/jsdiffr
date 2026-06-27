@@ -28,16 +28,18 @@ remotes::install_github("KyleHaynes/anthropic_diff")
 library(jsdiffr)
 
 diff_chars("the quick brown fox", "the quiet brown ox")
-#>             value added removed count
-#> 1:      the qui  FALSE   FALSE     7
-#> 2:           ck FALSE    TRUE     2
-#> 3:           et  TRUE   FALSE     2
-#> 4:    k brown    FALSE   FALSE     8
-#> ...
+```
+![Quick Brown Fox](./docs/img/main1.png)
 
+```r
 diff_words("The quick brown fox", "The slow brown fox")
+```
+![Quick Brown Fox Words](./docs/img/main2.png)
+
+```r
 diff_lines("alpha\nbeta\n", "alpha\nBETA\n")
 ```
+![Alpha Beta](./docs/img/main3.png)
 
 Each function returns a `data.table` of change objects with columns `value`,
 `added`, `removed`, and `count`. Printing a diff colours additions green and

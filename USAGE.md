@@ -56,26 +56,36 @@ library(jsdiffr)
 
 # Basic character diff
 diff_chars("Hello World", "Hello R World")
-#    value added removed count
-# 1  Hello FALSE   FALSE     5
-# 2      R  TRUE   FALSE     1
-# 3        FALSE   FALSE     1  ← the space
-# 4  World FALSE   FALSE     5
+```
+![alt text](./docs/img/01_helloworld.png)
 
+```r
+# The structure
+str(diff_chars("Hello World", "Hello R World"))
+# Classes 'jsdiff_changes', 'data.table' and 'data.frame':        3 obs. of  4 variables:
+#  $ value  : chr  "Hello " "R " "World"
+#  $ added  : logi  FALSE TRUE FALSE
+#  $ removed: logi  FALSE FALSE FALSE
+#  $ count  : int  6 2 5
+```
+
+```r
 # Case-insensitive comparison
 diff_chars("Hello", "hello", ignore_case = TRUE)
 # No changes — treated as equal
+```
 
+![alt text](./docs/img/02_hello.png)
+
+```r
 diff_chars("Hello", "hello", ignore_case = FALSE)
-# H is removed, h is added
+```
+![alt text](./docs/img/03_hhello.png)
 
+```r
 # Bail out early on very large diffs
 result <- diff_chars(strrep("a", 10000), strrep("b", 10000), max_edit_length = 100)
 is.null(result)  # TRUE — edit distance exceeded threshold
-
-# Timeout (milliseconds)
-result <- diff_chars(strrep("a", 50000), strrep("b", 50000), timeout = 50)
-is.null(result)  # TRUE if it timed out
 ```
 
 ### diff_words
@@ -86,26 +96,31 @@ if whitespace matters.
 
 ```r
 diff_words("The quick brown fox", "The slow brown fox")
-#       value added removed count
-# 1       The FALSE   FALSE     1
-# 2     quick FALSE    TRUE     1
-# 3      slow  TRUE   FALSE     1
-# 4    brown  FALSE   FALSE     1
-# 5      fox FALSE   FALSE     1
+```
+![alt text](./docs/img/04_quick.png)
 
+```r
 # Sentence with multiple word changes
 diff_words(
   "I went to the store yesterday",
   "I went to the market today"
 )
+```
+![alt text](./docs/img/05_store.png)
 
+```r
 # Case-insensitive word matching
 diff_words("The Cat", "the cat", ignore_case = TRUE)
 # No changes
+```
+![alt text](./docs/img/06_the_cat.png)
 
+```r
 # Unicode words work too
 diff_words("café au lait", "café noir")
 ```
+![alt text](./docs/img/07_cafe.png)
+
 
 ### diff_words_with_space
 
@@ -113,15 +128,12 @@ Like `diff_words` but treats runs of whitespace as tokens in their own right,
 so changing `"a  b"` to `"a b"` (double space → single) shows a diff.
 
 ```r
-diff_words_with_space("a  b  c", "a b c")
-#   value added removed count
-# 1     a FALSE   FALSE     1
-# 2        FALSE    TRUE     1   ← "  " (two spaces) removed
-# 3       TRUE   FALSE     1   ← " "  (one space) added
-# 4     b FALSE   FALSE     1
-# 5        FALSE    TRUE     1
-# 6       TRUE   FALSE     1
-# 7     c FALSE   FALSE     1
+str(diff_words_with_space("a  b  c", "a b c"))
+# Classes 'jsdiff_changes', 'data.table' and 'data.frame':        7 obs. of  4 variables:
+#  $ value  : chr  "a" "  " " " "b" ...
+#  $ added  : logi  FALSE FALSE TRUE FALSE FALSE TRUE ...
+#  $ removed: logi  FALSE TRUE FALSE FALSE TRUE FALSE ...
+#  $ count  : int  1 1 1 1 1 1 1
 ```
 
 ### diff_lines
@@ -134,13 +146,10 @@ old <- "line one\nline two\nline three\n"
 new <- "line one\nline TWO\nline three\nline four\n"
 
 diff_lines(old, new)
-#          value added removed count
-# 1    line one\n FALSE   FALSE     1
-# 2    line two\n FALSE    TRUE     1
-# 3    line TWO\n  TRUE   FALSE     1
-# 4  line three\n FALSE   FALSE     1
-# 5   line four\n  TRUE   FALSE     1
+```
+![alt text](./docs/img/08_lines.png)
 
+```r
 # Ignore leading/trailing whitespace per line
 diff_lines(
   "  hello  \n  world  \n",
@@ -180,11 +189,9 @@ old_text <- "The cat sat on the mat. The dog ran away. The bird flew high."
 new_text <- "The cat sat on the mat. The bird flew high."
 
 diff_sentences(old_text, new_text)
-#                        value added removed count
-# 1  The cat sat on the mat.  FALSE   FALSE     1
-# 2      The dog ran away.    FALSE    TRUE     1
-# 3     The bird flew high.   FALSE   FALSE     1
 ```
+![alt text](./docs/img/09_cat_sat.png)
+
 
 ### diff_css
 
@@ -196,8 +203,8 @@ old_css <- "a { color: red; font-size: 12px; }"
 new_css <- "a { color: blue; font-size: 14px; font-weight: bold; }"
 
 diff_css(old_css, new_css)
-# Shows individual property value changes
 ```
+![alt text](./docs/img/01_css.png)
 
 ---
 
@@ -211,16 +218,16 @@ concatenated string.
 # Integer vectors
 d <- diff_arrays(c(1, 2, 3, 4, 5), c(1, 2, 99, 4, 5))
 d$value   # list: [[1,2]], [[3]], [[99]], [[4,5]]
-d$removed # FALSE FALSE  TRUE  FALSE
-d$added   # FALSE FALSE FALSE   TRUE  FALSE
+d$removed # FALSE  TRUE FALSE FALSE
+d$added   # FALSE FALSE  TRUE FALSE
 
 # Character vectors
 diff_arrays(c("a", "b", "c", "d"), c("a", "c", "d", "e"))
-#   value added removed count
-# 1   [a] FALSE   FALSE     1
-# 2   [b] FALSE    TRUE     1
-# 3 [c,d] FALSE   FALSE     2
-# 4   [e]  TRUE   FALSE     1
+#      value added removed count
+# 1:      a  FALSE   FALSE     1
+# 2:      b  FALSE    TRUE     1
+# 3:    c,d  FALSE   FALSE     2
+# 4:      e   TRUE   FALSE     1
 
 # Custom comparator — case-insensitive string equality
 diff_arrays(
@@ -228,14 +235,18 @@ diff_arrays(
   c("apple", "banana", "CHERRY"),
   comparator = function(a, b) tolower(a) == tolower(b)
 )
-# No changes — all equal under case-folding
+#                  value  added removed count
+# 1: apple,banana,CHERRY  FALSE   FALSE     3
 
 # List of complex objects — uses identical() by default
 diff_arrays(
   list(list(id = 1, val = "a"), list(id = 2, val = "b")),
   list(list(id = 1, val = "a"), list(id = 2, val = "B"))
 )
-# Second element shows as changed
+#        value  added removed count
+# 1: <list[1]>  FALSE   FALSE     1
+# 2: <list[1]>  FALSE    TRUE     1
+# 3: <list[1]>   TRUE   FALSE     1
 
 # Numeric tolerance comparator
 diff_arrays(
@@ -243,7 +254,8 @@ diff_arrays(
   c(1.0001, 2.0, 3.0005),
   comparator = function(a, b) abs(a - b) < 0.001
 )
-# No changes (within tolerance)
+#                   value  added removed count
+# 1: 1.0001,2.0000,3.0005  FALSE   FALSE     3
 ```
 
 ---
@@ -262,7 +274,10 @@ new_obj <- list(name = "Alice", age = 31, scores = c(95, 87, 99))
 
 diff_json(old_obj, new_obj)
 # Shows "age" line changed (30 → 31) and last score changed (92 → 99)
+```
+![alt text](./docs/img/10_age.png)
 
+```r
 # Key order doesn't matter — keys are sorted before comparison
 diff_json(
   list(z = 1, a = 2),
@@ -276,7 +291,10 @@ diff_json(
   list(x = 1, y = 2, z = 3)
 )
 # Shows z line added
+```
+![alt text](./docs/img/11_z3.png)
 
+```r
 # NULL / NA handling
 diff_json(list(a = 1, b = NULL), list(a = 1, b = NA))
 # Both serialise to null by default
@@ -295,6 +313,7 @@ diff_json(
   '{"a": 1, "b": 3}'
 )
 ```
+![alt text](./docs/img/12_serial.png)
 
 ---
 
@@ -347,7 +366,6 @@ patch <- structured_patch(
 )
 
 cat(format_patch(patch))
-# Index: old.txt
 # ===================================================================
 # --- old.txt
 # +++ new.txt
@@ -359,14 +377,42 @@ cat(format_patch(patch))
 
 # Strip the Index / underline headers
 cat(format_patch(patch, include_index = FALSE, include_underline = FALSE))
+# --- old.txt
+# +++ new.txt
+# @@ -1,3 +1,3 @@
+#  line 1
+# -line 2
+# +LINE 2
+#  line 3
 
 # Strip file headers too (just the hunks)
 cat(format_patch(patch, include_index = FALSE, include_underline = FALSE,
                  include_file_headers = FALSE))
+# @@ -1,3 +1,3 @@
+#  line 1
+# -line 2
+# +LINE 2
+#  line 3
 
 # Format a list of patches at once
 p2 <- structured_patch("b.txt", "b.txt", "foo\n", "bar\n")
 cat(format_patch(list(patch, p2)))
+# ===================================================================
+# --- old.txt
+# +++ new.txt
+# @@ -1,3 +1,3 @@
+#  line 1
+# -line 2
+# +LINE 2
+#  line 3
+
+# Index: b.txt
+# ===================================================================
+# --- b.txt
+# +++ b.txt
+# @@ -1,1 +1,1 @@
+# -foo
+# +bar
 ```
 
 ### create_patch
@@ -397,12 +443,29 @@ cat(create_patch(
   old_header = "2024-01-01 10:00:00",
   new_header = "2024-06-15 14:30:00"
 ))
+# Index: script.R
+# ===================================================================
+# --- script.R    2024-01-01 10:00:00
+# +++ script.R    2024-06-15 14:30:00
+# @@ -1,1 +1,1 @@
+# -x <- 1
+# +x <- 2
 
 # Narrow context window
 long_file <- paste(paste0("line ", 1:20), collapse = "\n")
 modified   <- sub("line 10", "LINE 10", long_file)
 cat(create_patch("big.txt", long_file, modified, context = 2))
-# Only 2 lines of context shown around the change
+# Index: big.txt
+# ===================================================================
+# --- big.txt
+# +++ big.txt
+# @@ -8,5 +8,5 @@
+#  line 8
+#  line 9
+# -line 10
+# +LINE 10
+#  line 11
+#  line 12
 ```
 
 ### create_two_files_patch
@@ -417,9 +480,10 @@ cat(create_two_files_patch(
   old_str       = "helper <- function(x) x + 1\n",
   new_str       = "helper <- function(x, y = 0) x + y + 1\n"
 ))
+# ===================================================================
 # --- src/utils.R
 # +++ src/helpers.R
-# @@ -1 +1 @@
+# @@ -1,1 +1,1 @@
 # -helper <- function(x) x + 1
 # +helper <- function(x, y = 0) x + y + 1
 ```
@@ -459,6 +523,14 @@ p$hunks[[1]]$lines
 original_patch_str <- create_patch("f.txt", "old\ncontent\n", "new\ncontent\n")
 reparsed <- parse_patch(original_patch_str)
 cat(format_patch(reparsed))  # same as original_patch_str
+# Index: f.txt
+# ===================================================================
+# --- f.txt
+# +++ f.txt
+# @@ -1,2 +1,2 @@
+# -old
+# +new
+#  content
 
 # Multi-file patch
 multi <- paste0(
@@ -548,6 +620,7 @@ apply_patch(
     tolower(line) == tolower(patch_content)
   }
 )
+# [1] "LINE ONE\nline 2\nLINE THREE\n"
 ```
 
 ### apply_patches — multi-file callback API
@@ -581,8 +654,13 @@ apply_patches(
   }
 )
 
-cat(results[["a.txt"]])  # hello\nearth\n
-cat(results[["b.txt"]])  # foo\nBAR\nbaz\n
+cat(results[["a.txt"]])
+# hello
+# earth
+cat(results[["b.txt"]])
+# foo
+# BAR
+# baz
 
 # Pass extra options (fuzz_factor) via ...
 apply_patches(
@@ -689,6 +767,8 @@ tmp <- tempfile(fileext = ".html")
 writeLines(html, tmp)
 browseURL(tmp)
 ```
+![alt text](./docs/img/html.png)
+
 
 ### diff_html — three-column browser view
 
@@ -702,8 +782,10 @@ diff_html(
   c("hello world", "foo bar",  "unchanged line"),
   c("hello R",     "foo baz",  "unchanged line")
 )
-# Opens browser with 3 rows × 3 columns
+```
+![alt text](./docs/img/html2.png)
 
+```r
 # Word-level diff
 diff_html(
   c("The quick brown fox", "Hello world"),
@@ -755,11 +837,11 @@ Wraps additions in `<ins>` tags and deletions in `<del>` tags.
 
 ```r
 ch <- diff_chars("Hello World", "Hello R World")
-cat(convert_changes_to_xml(ch))
+convert_changes_to_xml(ch)
 # Hello <ins>R </ins>World
 
 ch2 <- diff_words("the cat sat", "the dog sat")
-cat(convert_changes_to_xml(ch2))
+convert_changes_to_xml(ch2)
 # the <del>cat</del><ins>dog</ins> sat
 
 # Useful for embedding in existing HTML documents
@@ -778,8 +860,15 @@ ch <- diff_chars("Hello World", "Hello R World")
 dmp <- convert_changes_to_dmp(ch)
 str(dmp)
 # List of 3
-#  $ : int [1:2] 0 5  (equal: "Hello ")   — wait, it's actually a list of pairs
-# Each element: list(op, text) where op is -1/0/1
+#  $ :List of 2
+#   ..$ operation: int 0
+#   ..$ value    : chr "Hello "
+#  $ :List of 2
+#   ..$ operation: int 1
+#   ..$ value    : chr "R "
+#  $ :List of 2
+#   ..$ operation: int 0
+#   ..$ value    : chr "World"
 
 # Inspect
 for (part in dmp) {
@@ -846,24 +935,25 @@ Set `one_change_per_token = TRUE` to get one row per token.
 
 ```r
 # Default: coalesced
-diff_chars("abcde", "axcye")
-#   value added removed count
-# 1     a FALSE   FALSE     1
-# 2     b FALSE    TRUE     1
-# 3     x  TRUE   FALSE     1
-# 4     c FALSE   FALSE     1
-# 5     d FALSE    TRUE     1
-# 6     y  TRUE   FALSE     1
-# 7     e FALSE   FALSE     1
+str(diff_chars("abcde", "axcye"))
+# Classes 'jsdiff_changes', 'data.table' and 'data.frame':        7 obs. of  4 variables:
+#  $ value  : chr  "a" "b" "x" "c" ...
+#  $ added  : logi  FALSE FALSE TRUE FALSE FALSE TRUE ...
+#  $ removed: logi  FALSE TRUE FALSE FALSE TRUE FALSE ...
+#  $ count  : int  1 1 1 1 1 1 1
 
 # one_change_per_token = TRUE behaves identically for chars,
 # but matters more for word/line diffs with consecutive changes
-diff_words(
+str(diff_words(
   "a b c d",
   "a x y d",
   one_change_per_token = TRUE
-)
-# b and c are separate removed rows; x and y are separate added rows
+))
+# Classes 'jsdiff_changes', 'data.table' and 'data.frame':        6 obs. of  4 variables:
+#  $ value  : chr  "a " " b " " c " " x " ...
+#  $ added  : logi  FALSE FALSE FALSE TRUE TRUE FALSE
+#  $ removed: logi  FALSE TRUE TRUE FALSE FALSE FALSE
+#  $ count  : int  1 1 1 1 1 1
 ```
 
 ### Working with the changes data.table directly
@@ -878,16 +968,13 @@ ch <- diff_words("the quick brown fox jumps", "the slow brown fox leaps")
 # Filter to only changed tokens
 ch[added == TRUE | removed == TRUE]
 
-# Count added vs removed tokens
-ch[, .(n = .N), by = .(type = fcase(added, "added", removed, "removed", TRUE, "context"))]
-
 # Reconstruct old string
 paste0(ch[removed == TRUE | (added == FALSE & removed == FALSE), value], collapse = "")
 
 # Reconstruct new string
 paste0(ch[added == TRUE  | (added == FALSE & removed == FALSE), value], collapse = "")
 
-# Check if two strings are identical (no changes)
+# Check if two strings are identical
 all(!ch$added & !ch$removed)
 
 # Coerce to a plain data.table (drops jsdiff_changes class)
