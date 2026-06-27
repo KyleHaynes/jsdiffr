@@ -1,0 +1,29 @@
+name: Render Quarto and deploy
+
+on:
+  push:
+    paths:
+      - 'manual/**'
+      - '.github/workflows/render-quarto.yml'
+
+jobs:
+  render-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Quarto
+        uses: quarto-dev/quarto-action@v2
+
+      - name: Render manual
+        run: quarto render manual/index.qmd --to html --output-dir _site
+
+      - name: Deploy to GitHub Pages (gh-pages)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
