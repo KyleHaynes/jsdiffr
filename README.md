@@ -60,7 +60,7 @@ diff_to_html(diff_words("the cat sat", "the dog sat"))
 #> (shown indented here for readability; the real output is a single line)
 ```
 
-A minimal Shiny app that diffs two text areas live:
+A minimal Shiny app that diffs two text areas:
 
 ```r
 library(shiny)
@@ -87,6 +87,17 @@ server <- function(input, output) {
 
 shinyApp(ui, server)
 ```
+
+A interactive Shiny app that diffs two text areas live:
+
+```r
+library(shiny)
+library(jsdiffr)
+
+shiny::runApp(system.file("shiny/address_diff", package = "jsdiffr"))
+```
+
+
 
 Use `diff_words()` / `diff_chars()` instead of `diff_lines()` for word- or
 character-level highlighting.
