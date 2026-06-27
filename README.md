@@ -1,5 +1,9 @@
 # jsdiffr
 
+[![R-CMD-check](https://github.com/KyleHaynes/jsdiffr/workflows/R-CMD-check/badge.svg)](https://github.com/KyleHaynes/jsdiffr/actions)
+[![Status](https://img.shields.io/badge/status-development-orange)](https://github.com/KyleHaynes/jsdiffr)
+
+
 A faithful R port of the [jsdiff](https://github.com/kpdecker/jsdiff)
 JavaScript library. Compute differences between two pieces of text or two
 sequences at the level of characters, words, lines, sentences, CSS tokens, JSON
