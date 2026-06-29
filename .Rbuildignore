@@ -5,3 +5,10 @@
 ^tools$
 ^scratch$
 ^.*\.code-workspace$
+^USAGE\.md$
+^blogpost\.qmd$
+^blogpost_files$
+^docs$
+^\.gitignore$
+^_pkgdown\.yml$
+^LICENSE\.md$

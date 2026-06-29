@@ -1,0 +1,22 @@
+# Compiled object code and shared libraries (build artifacts)
+*.o
+*.so
+*.dll
+*.dylib
+
+# R build/check artifacts
+*.Rproj.user
+.Rhistory
+.RData
+.Rproj.user/
+*.tar.gz
+..Rcheck/
+*.Rcheck/
+
+# Rendered Quarto/RMarkdown output
+*.html
+/blogpost_files/
+/.quarto/
+
+# Scratch
+scratch/

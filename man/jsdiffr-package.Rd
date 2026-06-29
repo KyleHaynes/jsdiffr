@@ -11,16 +11,17 @@ A faithful R port of the 'jsdiff' JavaScript library. Computes differences betwe
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/kpdecker/jsdiff}
+  \item \url{https://github.com/KyleHaynes/jsdiffr}
+  \item Report bugs at \url{https://github.com/KyleHaynes/jsdiffr/issues}
 }
 
 }
 \author{
 \strong{Maintainer}: Kyle Haynes \email{kyle@kylehaynes.com.au}
 
-Authors:
+Other contributors:
 \itemize{
-  \item Kevin Decker (Author of the original 'jsdiff' JavaScript library (https://github.com/kpdecker/jsdiff)) [copyright holder]
+  \item Kevin Decker (Author of the original 'jsdiff' JavaScript library (https://github.com/kpdecker/jsdiff)) [contributor, copyright holder]
 }
 
 }

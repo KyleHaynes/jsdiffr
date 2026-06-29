@@ -106,15 +106,21 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
 #' @param view If `TRUE`, write to a temp file and open in the browser.
 #' @return The HTML string, invisibly when `view = TRUE`.
 #' @examples
-#' diff_html(c("a", "b", "c"), c("a", "B", "c"))
+#' # Return the HTML as a string (use view = TRUE to open in a browser).
+#' diff_html(c("a", "b", "c"), c("a", "B", "c"), view = FALSE)
 #'
 #' # Ignore specific words when using word-level diff
 #' diff_html(
 #'   c("The big cat sat", "foo bar"),
 #'   c("The small cat sat", "foo baz"),
 #'   method = diff_words,
-#'   ignore_words = c("big", "small")
+#'   ignore_words = c("big", "small"),
+#'   view = FALSE
 #' )
+#' \dontrun{
+#' # Opens the diff table in your default browser:
+#' diff_html(c("a", "b", "c"), c("a", "B", "c"))
+#' }
 #' @export
 diff_html <- function(vec_1, vec_2, method = diff_chars, ignore_words = NULL,
                       view = TRUE) {

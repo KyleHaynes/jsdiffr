@@ -5,7 +5,7 @@ Version: 0.1.0
 Authors@R: c(
     person("Kyle", "Haynes", email = "kyle@kylehaynes.com.au",
            role = c("aut", "cre")),
-    person("Kevin", "Decker", role = c("aut", "cph"),
+    person("Kevin", "Decker", role = c("ctb", "cph"),
            comment = "Author of the original 'jsdiff' JavaScript library (https://github.com/kpdecker/jsdiff)"))
 Description: A faithful R port of the 'jsdiff' JavaScript library. Computes
     differences between two pieces of text or two sequences at the level of
@@ -17,15 +17,18 @@ Description: A faithful R port of the 'jsdiff' JavaScript library. Computes
     rendering diffs as coloured console output or HTML for use in 'shiny' apps.
 License: BSD_3_clause + file LICENSE
 Encoding: UTF-8
-URL: https://github.com/kpdecker/jsdiff
+URL: https://github.com/KyleHaynes/jsdiffr
+BugReports: https://github.com/KyleHaynes/jsdiffr/issues
 LinkingTo: Rcpp
 Imports:
     Rcpp,
     data.table,
-    jsonlite
+    jsonlite,
+    utils
 Suggests:
     testthat (>= 3.0.0),
     shiny,
+    htmltools,
     knitr,
     rmarkdown
 RoxygenNote: 7.3.2

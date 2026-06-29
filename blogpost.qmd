@@ -1,0 +1,119 @@
+---
+title: "Spotting address changes at a glance with jsdiffr"
+subtitle: "A tiny HTML diff that makes data cleaning reviewable"
+format:
+  html:
+    toc: false
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+```{r}
+#| include: false
+library(jsdiffr)
+```
+
+```{r}
+#| echo: false
+#| results: asis
+# Inject the package's diff colours + table styling once, then provide a helper
+# that pulls just the <table> out of diff_html()'s full HTML document (so it
+# embeds cleanly without its <body> styles hijacking the page).
+cat(
+  "<style>\n", diff_css_default(), "\n",
+  ".jsdiff-table{border-collapse:collapse;margin:1em 0;font-size:14px}\n",
+  ".jsdiff-table th,.jsdiff-table td{padding:4px 10px;border:1px solid #d0d7de;",
+  "vertical-align:top;white-space:pre-wrap;font-family:ui-monospace,monospace}\n",
+  ".jsdiff-table th{background:#f6f8fa;text-align:left}\n",
+  ".jsdiff-table td:nth-child(1){background:#fff8f8}\n",
+  ".jsdiff-table td:nth-child(2){background:#f8fff8}\n",
+  ".jsdiff-table td:nth-child(3){background:#fafafa}\n",
+  "</style>\n", sep = ""
+)
+
+diff_table <- function(...) {
+  html <- diff_html(..., view = FALSE)
+  regmatches(html, regexpr("<table.*</table>", html))
+}
+```
+
+If you've ever standardised a column of addresses — expanding `St` to `Street`,
+fixing a postcode, normalising `Ave` — you know the hard part isn't the
+transformation. It's *reviewing* it. A `before`/`after` table of 5,000 rows is
+unreadable; your eye can't find the one character that changed.
+
+`jsdiffr` ships two HTML helpers, **`diff_to_html()`** and **`diff_html()`**,
+that turn a diff into colour-coded markup: <span class="jsdiff-removed">red
+strike-through</span> for what was removed, <span class="jsdiff-added">green</span>
+for what was added. It's a one-liner, and it works inline in Quarto, R Markdown,
+or a Shiny app.
+
+## One pair, one line
+
+```{r}
+#| results: asis
+old <- "12 Baker St, London, NW1 6XE"
+new <- "12 Baker Street, London, NW1 6EX"
+
+cat(diff_to_html(diff_words(old, new)))
+```
+
+At a glance: `St` became `Street`, and the postcode swapped its last two
+characters — a typo you'd *never* catch scanning two text columns.
+
+## A whole column, side by side
+
+`diff_html()` takes two vectors and renders an **Original / Updated / Changes**
+table. Pass `view = FALSE` to get the HTML back instead of opening a browser.
+
+```{r}
+#| results: asis
+original <- c(
+  "350 Fifth Avenue, New York, NY 10118",
+  "1600 Pennsylvania Ave NW, Washington DC",
+  "Flat 4, 22 Acacia Avenue, Manchester M14 5TP"
+)
+cleaned <- c(
+  "350 5th Avenue, New York, NY 10118",
+  "1600 Pennsylvania Avenue NW, Washington, DC 20500",
+  "Flat 4B, 22 Acacia Ave, Manchester M14 5TP"
+)
+
+cat(diff_table(original, cleaned, method = diff_words))
+```
+
+Every row tells you exactly what your cleaning step did — and, just as
+importantly, what it *didn't* touch.
+
+## Hide the noise you don't care about
+
+Reviewing a `St` → `Street` expansion across thousands of rows? That's expected;
+you don't want it lighting up red and green. `ignore_words` renders changes made
+up entirely of those words as plain context, so only the *surprising* edits
+stand out:
+
+```{r}
+#| results: asis
+cat(diff_table(
+  original, cleaned,
+  method       = diff_words,
+  ignore_words = c("ave", "avenue", "5th", "fifth")
+))
+```
+
+Now the abbreviation expansions fade into the background and the genuine
+changes — the added ZIP code, `4` → `4B` — are what catch your eye.
+
+## Why it's worth reaching for
+
+- **Reviewable cleaning.** Diffs make an address-standardisation pass auditable
+  instead of a black box.
+- **Zero setup.** No JS toolchain — `diff_to_html()` returns a string you can
+  drop straight into a report or `shiny::renderUI()`.
+- **Tunable signal.** `ignore_words` and the `diff_*` granularity (`diff_chars`,
+  `diff_words`, `diff_sentences`) let you dial in exactly which changes matter.
+
+Two functions, a couple of vectors, and a column of addresses becomes something
+you can actually *read*.
