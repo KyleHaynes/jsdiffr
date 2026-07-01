@@ -2,9 +2,16 @@
 % Please edit documentation in R/html.R
 \name{diff_html}
 \alias{diff_html}
-\title{Show a vector diff as a three-column HTML table in the browser}
+\title{Show a vector diff as a three-column HTML table}
 \usage{
-diff_html(vec_1, vec_2, method = diff_chars, ignore_words = NULL, view = TRUE)
+diff_html(
+  vec_1,
+  vec_2,
+  method = diff_chars,
+  ignore_words = NULL,
+  view = TRUE,
+  viewer = NULL
+)
 }
 \arguments{
 \item{vec_1, vec_2}{Character vectors of equal length to compare.}
@@ -16,7 +23,16 @@ highlighting. Changes consisting entirely of these words (case-insensitive)
 are rendered as plain context rather than additions/deletions. Most useful
 with \code{method = diff_words}.}
 
-\item{view}{If \code{TRUE}, write to a temp file and open in the browser.}
+\item{view}{If \code{TRUE}, write to a temp file and display it (see \code{viewer}).}
+
+\item{viewer}{Function used to display the temp file when \code{view = TRUE}.
+Defaults to \code{NULL}, which auto-detects an in-editor viewer at call time:
+\code{getOption("viewer")} (set by RStudio and by the VS Code / Positron R
+extensions when their session watcher is attached), then
+\code{rstudioapi::viewer} if the 'rstudioapi' package reports one is available.
+Falls back to \code{\link[utils:browseURL]{utils::browseURL()}} (with a one-line \code{\link[=message]{message()}} explaining
+why) when neither is found. Pass \code{utils::browseURL} explicitly to force
+the system browser.}
 }
 \value{
 The HTML string, invisibly when \code{view = TRUE}.
@@ -25,10 +41,10 @@ The HTML string, invisibly when \code{view = TRUE}.
 Compares \code{vec_1} and \code{vec_2} element-by-element, rendering one table row
 per pair with \strong{Left} (original), \strong{Right} (new), and \strong{Changes}
 (inline combined diff) columns. Uses \code{\link[=diff_chars]{diff_chars()}} (character-level) by
-default. Opens the result in the system browser.
+default.
 }
 \examples{
-# Return the HTML as a string (use view = TRUE to open in a browser).
+# Return the HTML as a string (use view = TRUE to display it).
 diff_html(c("a", "b", "c"), c("a", "B", "c"), view = FALSE)
 
 # Ignore specific words when using word-level diff
@@ -40,7 +56,11 @@ diff_html(
   view = FALSE
 )
 \dontrun{
-# Opens the diff table in your default browser:
+# Opens the diff table in RStudio's/VS Code's Viewer pane if available,
+# otherwise the system browser:
 diff_html(c("a", "b", "c"), c("a", "B", "c"))
+
+# Force the system browser even inside an IDE:
+diff_html(c("a", "b", "c"), c("a", "B", "c"), viewer = utils::browseURL)
 }
 }

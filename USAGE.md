@@ -770,11 +770,28 @@ browseURL(tmp)
 ![alt text](./docs/img/html.png)
 
 
-### diff_html — three-column browser view
+### diff_html — three-column diff view
 
 `diff_html` compares two equal-length character vectors and renders a
 **three-column HTML table** — Left (original), Right (new), Changes (inline
-diff) — then opens it in the system browser.
+diff) — then displays it.
+
+By default (`view = TRUE`), it auto-detects an in-editor viewer at call time —
+first `getOption("viewer")`, then `rstudioapi::viewer` if 'rstudioapi' reports
+one is available — so the diff shows up in an **in-editor Viewer pane/tab**
+in RStudio or VS Code / Positron instead of a browser window. If neither is
+found, it falls back to `utils::browseURL()` and prints a one-line `message()`
+explaining why (so a call that "should" have opened in the IDE doesn't look
+like it silently misbehaved). Pass `viewer = your_function` to route it
+elsewhere, or `viewer = utils::browseURL` to force the system browser even
+inside an IDE.
+
+**In VS Code specifically:** the R extension only wires up `getOption("viewer")`
+once its session watcher is *attached* to the R terminal you're running in. If
+`diff_html()` unexpectedly opens your system browser, check the terminal is
+attached (Command Palette → "R: Attach Active Terminal") — a terminal that
+detaches/reattaches mid-session (e.g. after restarting R) is the most common
+cause of "it worked a minute ago but not now."
 
 ```r
 # Character-level diff (default)

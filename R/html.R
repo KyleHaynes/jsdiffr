@@ -90,12 +90,12 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
   paste0(pieces, collapse = "")
 }
 
-#' Show a vector diff as a three-column HTML table in the browser
+#' Show a vector diff as a three-column HTML table
 #'
 #' Compares `vec_1` and `vec_2` element-by-element, rendering one table row
 #' per pair with **Left** (original), **Right** (new), and **Changes**
 #' (inline combined diff) columns. Uses [diff_chars()] (character-level) by
-#' default. Opens the result in the system browser.
+#' default.
 #'
 #' @param vec_1,vec_2 Character vectors of equal length to compare.
 #' @param method Diff function applied per element pair. Defaults to [diff_chars].
@@ -103,10 +103,18 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
 #'   highlighting. Changes consisting entirely of these words (case-insensitive)
 #'   are rendered as plain context rather than additions/deletions. Most useful
 #'   with `method = diff_words`.
-#' @param view If `TRUE`, write to a temp file and open in the browser.
+#' @param view If `TRUE`, write to a temp file and display it (see `viewer`).
+#' @param viewer Function used to display the temp file when `view = TRUE`.
+#'   Defaults to `NULL`, which auto-detects an in-editor viewer at call time:
+#'   `getOption("viewer")` (set by RStudio and by the VS Code / Positron R
+#'   extensions when their session watcher is attached), then
+#'   `rstudioapi::viewer` if the 'rstudioapi' package reports one is available.
+#'   Falls back to [utils::browseURL()] (with a one-line [message()] explaining
+#'   why) when neither is found. Pass `utils::browseURL` explicitly to force
+#'   the system browser.
 #' @return The HTML string, invisibly when `view = TRUE`.
 #' @examples
-#' # Return the HTML as a string (use view = TRUE to open in a browser).
+#' # Return the HTML as a string (use view = TRUE to display it).
 #' diff_html(c("a", "b", "c"), c("a", "B", "c"), view = FALSE)
 #'
 #' # Ignore specific words when using word-level diff
@@ -118,12 +126,16 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
 #'   view = FALSE
 #' )
 #' \dontrun{
-#' # Opens the diff table in your default browser:
+#' # Opens the diff table in RStudio's/VS Code's Viewer pane if available,
+#' # otherwise the system browser:
 #' diff_html(c("a", "b", "c"), c("a", "B", "c"))
+#'
+#' # Force the system browser even inside an IDE:
+#' diff_html(c("a", "b", "c"), c("a", "B", "c"), viewer = utils::browseURL)
 #' }
 #' @export
 diff_html <- function(vec_1, vec_2, method = diff_chars, ignore_words = NULL,
-                      view = TRUE) {
+                      view = TRUE, viewer = NULL) {
   stopifnot(length(vec_1) == length(vec_2))
   ignore_lc <- tolower(ignore_words %||% character(0))
 
@@ -160,10 +172,42 @@ diff_html <- function(vec_1, vec_2, method = diff_chars, ignore_words = NULL,
   if (view) {
     tmp <- tempfile(fileext = ".html")
     writeLines(html, tmp)
-    browseURL(tmp)
+    .display_html(tmp, viewer)
     invisible(html)
   } else {
     html
+  }
+}
+
+# Internal: find an in-editor viewer, checked fresh on every call because IDEs
+# attach/detach their session-watcher hooks (e.g. vscode-R's "R: Attach Active
+# Terminal") after the R session has already started, so a cached value could
+# go stale mid-session.
+.resolve_viewer <- function() {
+  opt <- getOption("viewer")
+  if (is.function(opt)) return(opt)
+  if (requireNamespace("rstudioapi", quietly = TRUE) &&
+      isTRUE(tryCatch(rstudioapi::isAvailable(), error = function(e) FALSE))) {
+    return(rstudioapi::viewer)
+  }
+  NULL
+}
+
+# Internal: display `path` (a local HTML file) with `viewer` if supplied,
+# else auto-detect one, else fall back to the system browser with a message
+# explaining why (so a silent "wrong window opened" doesn't look mysterious).
+.display_html <- function(path, viewer = NULL) {
+  if (!is.function(viewer)) viewer <- .resolve_viewer()
+  if (is.function(viewer)) {
+    viewer(path)
+  } else {
+    message(
+      "jsdiffr: no IDE viewer detected (getOption(\"viewer\") is unset and ",
+      "rstudioapi reports unavailable) - opening in the system browser. In ",
+      "VS Code, check the R extension shows the terminal as attached ",
+      "(Command Palette > \"R: Attach Active Terminal\" if not)."
+    )
+    browseURL(path)
   }
 }
 

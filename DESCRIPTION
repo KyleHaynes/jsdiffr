@@ -30,7 +30,9 @@ Suggests:
     shiny,
     htmltools,
     knitr,
-    rmarkdown
+    rmarkdown,
+    rstudioapi,
+    withr
 RoxygenNote: 7.3.2
 Roxygen: list(markdown = TRUE)
 VignetteBuilder: knitr
