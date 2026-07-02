@@ -10,6 +10,27 @@ test_that("diff_html view = FALSE returns HTML without displaying it", {
   expect_match(html, "<table", fixed = TRUE)
 })
 
+test_that("diff_html only shades Left/Right cells that actually differ", {
+  html <- diff_html(c("d", "f"), c("c", "f"), view = FALSE)
+  rows <- regmatches(html, gregexpr("<tr>.*?</tr>", html))[[1]]
+  changed_row   <- rows[grepl(">d<", rows, fixed = TRUE) | grepl(">c<", rows)]
+  unchanged_row <- rows[grepl(">f<", rows)]
+
+  expect_match(changed_row, 'class="jsdiff-cell-removed"', fixed = TRUE)
+  expect_match(changed_row, 'class="jsdiff-cell-added"', fixed = TRUE)
+  expect_no_match(unchanged_row, "jsdiff-cell-removed")
+  expect_no_match(unchanged_row, "jsdiff-cell-added")
+})
+
+test_that("diff_html suppresses cell shading when the only diff is an ignored word", {
+  html <- diff_html("big cat", "small cat",
+    method = diff_words, ignore_words = c("big", "small"), view = FALSE
+  )
+  # the CSS block always mentions the class names; only the <td> usage matters
+  expect_no_match(html, 'class="jsdiff-cell-removed"', fixed = TRUE)
+  expect_no_match(html, 'class="jsdiff-cell-added"', fixed = TRUE)
+})
+
 test_that("diff_html(view = TRUE) uses an explicit viewer over auto-detection", {
   called <- NULL
   fake_viewer <- function(path) called <<- path
