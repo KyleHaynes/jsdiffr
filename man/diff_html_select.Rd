@@ -47,13 +47,15 @@ The HTML string, invisibly when \code{view = TRUE}.
 }
 \description{
 Like \code{\link[=diff_html]{diff_html()}}, but adds a checkbox beside the Left column and another
-beside the Right column so individual rows can be marked. A floating
-overlay tracks the checked rows live and displays them as an R vector
-literal (e.g. \code{c(2, 22, 33)}) for each side, with a Copy button, so the
-selection can be pasted straight into subsetting code such as
-\code{vec_1[c(2, 22, 33)]}. Row numbers are 1-based and match positions in
-\code{vec_1}/\code{vec_2}. A checkbox in each header column selects/clears all rows
-on that side at once.
+beside the Right column so individual rows can be marked. Click anywhere in
+a row's Left or Right column to toggle its checkbox (not just the box
+itself), and shift-click to select a range from the last-clicked row on
+that column, like a file browser. A floating overlay tracks the checked
+rows live and displays them as an R vector literal (e.g. \code{c(2, 22, 33)})
+for each side, with a Copy button, so the selection can be pasted straight
+into subsetting code such as \code{vec_1[c(2, 22, 33)]}. Row numbers are 1-based
+and match positions in \code{vec_1}/\code{vec_2}. A checkbox in each header column
+selects/clears all rows on that side at once.
 }
 \examples{
 diff_html_select(c("a", "b", "c"), c("a", "B", "c"), view = FALSE)

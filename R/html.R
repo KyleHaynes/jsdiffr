@@ -231,13 +231,15 @@ diff_html <- function(vec_1, vec_2, method = diff_chars, ignore_words = NULL,
 #' Show a vector diff as a row-selectable HTML table
 #'
 #' Like [diff_html()], but adds a checkbox beside the Left column and another
-#' beside the Right column so individual rows can be marked. A floating
-#' overlay tracks the checked rows live and displays them as an R vector
-#' literal (e.g. `c(2, 22, 33)`) for each side, with a Copy button, so the
-#' selection can be pasted straight into subsetting code such as
-#' `vec_1[c(2, 22, 33)]`. Row numbers are 1-based and match positions in
-#' `vec_1`/`vec_2`. A checkbox in each header column selects/clears all rows
-#' on that side at once.
+#' beside the Right column so individual rows can be marked. Click anywhere in
+#' a row's Left or Right column to toggle its checkbox (not just the box
+#' itself), and shift-click to select a range from the last-clicked row on
+#' that column, like a file browser. A floating overlay tracks the checked
+#' rows live and displays them as an R vector literal (e.g. `c(2, 22, 33)`)
+#' for each side, with a Copy button, so the selection can be pasted straight
+#' into subsetting code such as `vec_1[c(2, 22, 33)]`. Row numbers are 1-based
+#' and match positions in `vec_1`/`vec_2`. A checkbox in each header column
+#' selects/clears all rows on that side at once.
 #'
 #' @inheritParams diff_html
 #' @return The HTML string, invisibly when `view = TRUE`.
@@ -372,32 +374,45 @@ diff_html_select <- function(vec_1, vec_2, method = diff_chars, ignore_words = N
     "    paintSide('right', 3);\n",
     "  }\n",
     "\n",
-    "  document.querySelectorAll('.jsdiff-chk-left, .jsdiff-chk-right').forEach(function (b) {\n",
-    "    b.addEventListener('change', update);\n",
-    "  });\n",
     "  selAllLeft.addEventListener('change', function () {\n",
     "    document.querySelectorAll('.jsdiff-chk-left').forEach(function (b) { b.checked = selAllLeft.checked; });\n",
+    "    lastIndex.left = null;\n",
     "    update();\n",
     "  });\n",
     "  selAllRight.addEventListener('change', function () {\n",
     "    document.querySelectorAll('.jsdiff-chk-right').forEach(function (b) { b.checked = selAllRight.checked; });\n",
+    "    lastIndex.right = null;\n",
     "    update();\n",
     "  });\n",
     "  document.getElementById('jsdiff-copy-left').addEventListener('click', function () { copy(leftText.textContent); });\n",
     "  document.getElementById('jsdiff-copy-right').addEventListener('click', function () { copy(rightText.textContent); });\n",
     "\n",
+    "  var lastIndex = { left: null, right: null };\n",
+    "  function applyRange(side, idx, checked) {\n",
+    "    var lo = Math.min(lastIndex[side], idx);\n",
+    "    var hi = Math.max(lastIndex[side], idx);\n",
+    "    document.querySelectorAll('.jsdiff-chk-' + side).forEach(function (b) {\n",
+    "      var bi = parseInt(b.getAttribute('data-idx'), 10);\n",
+    "      if (bi >= lo && bi <= hi) b.checked = checked;\n",
+    "    });\n",
+    "  }\n",
+    "\n",
     "  document.querySelector('.jsdiff-table tbody').addEventListener('click', function (e) {\n",
-    "    if (e.target.tagName === 'INPUT') return;\n",
-    "    if (window.getSelection().toString().length > 0) return;\n",
+    "    var isBox = e.target.tagName === 'INPUT';\n",
+    "    if (!isBox && window.getSelection().toString().length > 0) return;\n",
     "    var cell = e.target.closest('td');\n",
     "    if (!cell) return;\n",
-    "    var side = cell.classList.contains('jsdiff-col-left') ? 'left'\n",
-    "      : cell.classList.contains('jsdiff-col-right') ? 'right' : null;\n",
+    "    var side = isBox\n",
+    "      ? (e.target.classList.contains('jsdiff-chk-left') ? 'left' : e.target.classList.contains('jsdiff-chk-right') ? 'right' : null)\n",
+    "      : (cell.classList.contains('jsdiff-col-left') ? 'left' : cell.classList.contains('jsdiff-col-right') ? 'right' : null);\n",
     "    if (!side) return;\n",
     "    var row = cell.closest('tr');\n",
-    "    var box = row.querySelector('.jsdiff-chk-' + side);\n",
+    "    var box = isBox ? e.target : row.querySelector('.jsdiff-chk-' + side);\n",
     "    if (!box) return;\n",
-    "    box.checked = !box.checked;\n",
+    "    if (!isBox) box.checked = !box.checked;\n",
+    "    var idx = parseInt(box.getAttribute('data-idx'), 10);\n",
+    "    if (e.shiftKey && lastIndex[side] !== null) applyRange(side, idx, box.checked);\n",
+    "    lastIndex[side] = idx;\n",
     "    update();\n",
     "  });\n",
     "\n",
