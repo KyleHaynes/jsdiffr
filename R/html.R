@@ -107,6 +107,10 @@ diff_to_html <- function(changes, wrap = TRUE, pre = TRUE) {
 .diff_row_pieces <- function(vec_1, vec_2, method, ignore_lc) {
   lapply(seq_along(vec_1), function(i) {
     ch <- method(vec_1[i], vec_2[i])
+    # NULL when either side is NA, or when the diff hit max_edit_length /
+    # timeout: render the row as empty rather than erroring out.
+    if (is.null(ch)) ch <- new_changes(character(0), logical(0), logical(0),
+                                       integer(0))
     list(
       left        = .side_html(ch, "left",  ignore_lc),
       right       = .side_html(ch, "right", ignore_lc),

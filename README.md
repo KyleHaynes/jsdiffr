@@ -45,6 +45,52 @@ Each function returns a `data.table` of change objects with columns `value`,
 `added`, `removed`, and `count`. Printing a diff colours additions green and
 deletions red.
 
+## Diffing columns
+
+The string diff functions are vectorised, so they can be used directly as a
+`data.frame` / `data.table` column: given two vectors of equal length (or one
+vector and one length-1 value, which is recycled) each element pair is diffed
+and rendered to a single string.
+
+```r
+library(data.table)
+
+dt <- data.table(iris)
+dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)]
+#                     blah Species
+# 1: [-5-]{+3+}.[-1-]{+5+}  setosa
+# 2:          [-4.9-]{+3+}  setosa
+# 3: [-4-]{+3+}.[-7-]{+2+}  setosa
+# 4: [-4-]{+3+}.[-6-]{+1+}  setosa
+```
+
+Non-character columns are coerced with `as.character()` (numerics and factors
+just work) and `NA` on either side gives `NA` out. Two length-1 strings still
+return a `jsdiff_changes` table, so nothing about the scalar API changed.
+
+`format` picks the rendering: `"markup"` (the default above), `"ansi"`,
+`"html"`, `"xml"`, `"added"` / `"removed"` for only the inserted or deleted
+text, or `"changes"` for a list column of the full change tables.
+
+```r
+addr <- data.table(
+  old = c("12 Smith St, Carlton", "9/4 Brown Rd, Fitzroy", "71 Lygon Street"),
+  new = c("12 Smith Street, Carlton", "9/4 Browne Rd, Fitzroy", "71 Lygon Street")
+)
+
+addr[, .(added   = diff_words(old, new, format = "added"),
+         removed = diff_words(old, new, format = "removed"))]
+#     added removed
+# 1: Street      St
+# 2: Browne   Brown
+# 3:
+```
+
+The diff runs once per *distinct* pair of values rather than once per row, so
+repeated pairs in a long column are nearly free. See
+[USAGE.md](./USAGE.md#diffing-columns-dataframe--datatable) for the full
+treatment, and `help("vectorised-diffs")` in R.
+
 ## HTML output and Shiny
 
 `diff_to_html()` renders a diff as HTML spans (`.jsdiff-added` / `.jsdiff-removed`),
@@ -109,6 +155,9 @@ character-level highlighting.
 * **Diffing**: `diff_chars`, `diff_words`, `diff_words_with_space`,
   `diff_lines`, `diff_trimmed_lines`, `diff_sentences`, `diff_css`, `diff_json`,
   `diff_arrays`.
+* **Column diffs**: every string diff is vectorised over its inputs for use
+  inside a `data.frame` / `data.table`, with `format=` choosing the rendering
+  (`changes_to_markup()` and friends).
 * **Patches**: `structured_patch`, `create_patch`, `create_two_files_patch`,
   `format_patch`, `parse_patch`, `apply_patch`, `apply_patches`, `reverse_patch`,
   plus Unix/Windows line-ending helpers.

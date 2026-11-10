@@ -20,7 +20,7 @@ A length-1 character string of HTML.
 \description{
 Wraps additions in \verb{<span class="jsdiff-added">} and deletions in
 \verb{<span class="jsdiff-removed">}. Suitable for embedding in a 'shiny' app via
-\code{\link[shiny:renderUI]{shiny::renderUI()}} / \code{\link[shiny:reexports]{shiny::HTML()}} or in an R Markdown document. Use
+\code{\link[shiny:renderUI]{shiny::renderUI()}} / \code{\link[shiny:HTML]{shiny::HTML()}} or in an R Markdown document. Use
 \code{\link[=diff_css_default]{diff_css_default()}} to obtain matching CSS.
 }
 \examples{

@@ -3,6 +3,11 @@
 #
 # Each returns a `jsdiff_changes` object: a data.table with columns
 # `value` (character), `added` (logical), `removed` (logical), `count` (integer).
+#
+# All of them are also vectorised over their inputs so they can be used as
+# `data.frame` / `data.table` columns - see R/vectorised.R and
+# ?`vectorised-diffs`. The per-pair work lives in a `one()` closure that each
+# function hands to diff_dispatch(), which picks the return shape.
 
 # Helper: run a string diff given tokens + a key function.
 run_string_diff <- function(old_tokens, new_tokens, key_fun,
@@ -26,7 +31,11 @@ run_string_diff <- function(old_tokens, new_tokens, key_fun,
 
 #' Diff two strings character by character
 #'
-#' @param old_str,new_str Length-1 character strings to compare.
+#' @param old_str,new_str The values to compare. Length-1 strings give a
+#'   [jsdiff_changes] table; equal-length vectors (or one vector and one
+#'   length-1 value) are diffed element-wise and give one value per element -
+#'   see [vectorised-diffs]. Non-character inputs are coerced with
+#'   [as.character()].
 #' @param ignore_case If `TRUE`, characters differing only in case are treated
 #'   as equal.
 #' @param max_edit_length If set, abort and return `NULL` once the edit distance
@@ -35,18 +44,30 @@ run_string_diff <- function(old_tokens, new_tokens, key_fun,
 #'   takes longer than this.
 #' @param one_change_per_token If `TRUE`, emit one change object per token
 #'   rather than coalescing runs of like changes.
-#' @return A [jsdiff_changes] object, or `NULL` if `max_edit_length`/`timeout`
-#'   was exceeded.
+#' @param format How to render each diff: one of `"markup"`, `"ansi"`,
+#'   `"html"`, `"xml"`, `"added"`, `"removed"` or `"changes"`, documented in
+#'   [vectorised-diffs]. The default (`NULL`) means `"changes"` for two
+#'   length-1 inputs and `"markup"` otherwise.
+#' @return A [jsdiff_changes] object for two length-1 inputs with no `format`
+#'   (or `NULL` if `max_edit_length`/`timeout` was exceeded); otherwise a vector
+#'   as long as the recycled inputs - see [vectorised-diffs].
 #' @examples
 #' diff_chars("abc", "abd")
+#'
+#' # as a data.frame column
+#' diff_chars(c("abc", "abd"), c("abc", "abe"))
 #' @export
 diff_chars <- function(old_str, new_str, ignore_case = FALSE,
                        max_edit_length = NULL, timeout = NULL,
-                       one_change_per_token = FALSE) {
+                       one_change_per_token = FALSE, format = NULL) {
   key_fun <- if (ignore_case) function(t) tolower(t) else function(t) t
-  run_string_diff(tokenize_chars(old_str), tokenize_chars(new_str), key_fun,
-                  mode = "chars", max_edit_length = max_edit_length,
-                  timeout = timeout, one_change_per_token = one_change_per_token)
+  one <- function(a, b) {
+    run_string_diff(tokenize_chars(a), tokenize_chars(b), key_fun,
+                    mode = "chars", max_edit_length = max_edit_length,
+                    timeout = timeout,
+                    one_change_per_token = one_change_per_token)
+  }
+  diff_dispatch(one, old_str, new_str, format)
 }
 
 #' Diff two strings word by word
@@ -58,29 +79,37 @@ diff_chars <- function(old_str, new_str, ignore_case = FALSE,
 #' @inheritParams diff_chars
 #' @param ignore_whitespace Backwards-compatibility shim from jsdiff: if
 #'   explicitly `FALSE`, behaves like [diff_words_with_space()].
-#' @return A [jsdiff_changes] object.
+#' @inherit diff_chars return
 #' @examples
 #' diff_words("The quick brown fox", "The slow brown fox")
+#'
+#' # as a data.frame column
+#' diff_words(c("the cat sat", "12 Smith St"), c("the dog sat", "12 Smith Street"))
 #' @export
 diff_words <- function(old_str, new_str, ignore_case = FALSE,
                        ignore_whitespace = NULL, max_edit_length = NULL,
-                       timeout = NULL, one_change_per_token = FALSE) {
+                       timeout = NULL, one_change_per_token = FALSE,
+                       format = NULL) {
   if (!is.null(ignore_whitespace) && !isTRUE(ignore_whitespace)) {
     return(diff_words_with_space(old_str, new_str, ignore_case = ignore_case,
                                  max_edit_length = max_edit_length,
                                  timeout = timeout,
-                                 one_change_per_token = one_change_per_token))
+                                 one_change_per_token = one_change_per_token,
+                                 format = format))
   }
   key_fun <- if (ignore_case) {
     function(t) str_trim(tolower(t))
   } else {
     function(t) str_trim(t)
   }
-  run_string_diff(tokenize_words(old_str), tokenize_words(new_str), key_fun,
-                  join = word_join, mode = "words",
-                  max_edit_length = max_edit_length, timeout = timeout,
-                  one_change_per_token = one_change_per_token,
-                  post_process = post_process_words)
+  one <- function(a, b) {
+    run_string_diff(tokenize_words(a), tokenize_words(b), key_fun,
+                    join = word_join, mode = "words",
+                    max_edit_length = max_edit_length, timeout = timeout,
+                    one_change_per_token = one_change_per_token,
+                    post_process = post_process_words)
+  }
+  diff_dispatch(one, old_str, new_str, format)
 }
 
 word_join <- function(tokens) {
@@ -93,16 +122,19 @@ word_join <- function(tokens) {
 
 #' Diff two strings word by word, treating whitespace as significant
 #' @inheritParams diff_chars
-#' @return A [jsdiff_changes] object.
+#' @inherit diff_chars return
 #' @export
 diff_words_with_space <- function(old_str, new_str, ignore_case = FALSE,
                                   max_edit_length = NULL, timeout = NULL,
-                                  one_change_per_token = FALSE) {
+                                  one_change_per_token = FALSE, format = NULL) {
   key_fun <- if (ignore_case) function(t) tolower(t) else function(t) t
-  run_string_diff(tokenize_words_with_space(old_str),
-                  tokenize_words_with_space(new_str), key_fun,
-                  mode = "words", max_edit_length = max_edit_length,
-                  timeout = timeout, one_change_per_token = one_change_per_token)
+  one <- function(a, b) {
+    run_string_diff(tokenize_words_with_space(a), tokenize_words_with_space(b),
+                    key_fun, mode = "words",
+                    max_edit_length = max_edit_length, timeout = timeout,
+                    one_change_per_token = one_change_per_token)
+  }
+  diff_dispatch(one, old_str, new_str, format)
 }
 
 #' Diff two strings line by line
@@ -116,7 +148,7 @@ diff_words_with_space <- function(old_str, new_str, ignore_case = FALSE,
 #'   instead of being attached to the preceding line.
 #' @param strip_trailing_cr If `TRUE`, `\r\n` is normalised to `\n` before
 #'   diffing.
-#' @return A [jsdiff_changes] object.
+#' @inherit diff_chars return
 #' @examples
 #' diff_lines("line one\nline two\n", "line one\nline 2\n")
 #' @export
@@ -124,7 +156,7 @@ diff_lines <- function(old_str, new_str, ignore_whitespace = FALSE,
                        ignore_newline_at_eof = FALSE, newline_is_token = FALSE,
                        strip_trailing_cr = FALSE, ignore_case = FALSE,
                        max_edit_length = NULL, timeout = NULL,
-                       one_change_per_token = FALSE) {
+                       one_change_per_token = FALSE, format = NULL) {
   tok <- function(s) tokenize_lines(s, newline_is_token = newline_is_token,
                                     strip_trailing_cr = strip_trailing_cr)
   key_fun <- function(t) {
@@ -139,50 +171,59 @@ diff_lines <- function(old_str, new_str, ignore_whitespace = FALSE,
     if (ignore_case) k <- tolower(k)
     k
   }
-  run_string_diff(tok(old_str), tok(new_str), key_fun, mode = "lines",
-                  max_edit_length = max_edit_length, timeout = timeout,
-                  one_change_per_token = one_change_per_token)
+  one <- function(a, b) {
+    run_string_diff(tok(a), tok(b), key_fun, mode = "lines",
+                    max_edit_length = max_edit_length, timeout = timeout,
+                    one_change_per_token = one_change_per_token)
+  }
+  diff_dispatch(one, old_str, new_str, format)
 }
 
 #' Diff two strings line by line, ignoring leading/trailing whitespace
 #' @inheritParams diff_lines
-#' @return A [jsdiff_changes] object.
+#' @inherit diff_chars return
 #' @export
 diff_trimmed_lines <- function(old_str, new_str, ignore_case = FALSE,
                                newline_is_token = FALSE,
                                strip_trailing_cr = FALSE,
                                max_edit_length = NULL, timeout = NULL,
-                               one_change_per_token = FALSE) {
+                               one_change_per_token = FALSE, format = NULL) {
   diff_lines(old_str, new_str, ignore_whitespace = TRUE,
              newline_is_token = newline_is_token,
              strip_trailing_cr = strip_trailing_cr, ignore_case = ignore_case,
              max_edit_length = max_edit_length, timeout = timeout,
-             one_change_per_token = one_change_per_token)
+             one_change_per_token = one_change_per_token, format = format)
 }
 
 #' Diff two strings sentence by sentence
 #' @inheritParams diff_chars
-#' @return A [jsdiff_changes] object.
+#' @inherit diff_chars return
 #' @export
 diff_sentences <- function(old_str, new_str, ignore_case = FALSE,
                            max_edit_length = NULL, timeout = NULL,
-                           one_change_per_token = FALSE) {
+                           one_change_per_token = FALSE, format = NULL) {
   key_fun <- if (ignore_case) function(t) tolower(t) else function(t) t
-  run_string_diff(tokenize_sentences(old_str), tokenize_sentences(new_str),
-                  key_fun, mode = "sentences",
-                  max_edit_length = max_edit_length, timeout = timeout,
-                  one_change_per_token = one_change_per_token)
+  one <- function(a, b) {
+    run_string_diff(tokenize_sentences(a), tokenize_sentences(b), key_fun,
+                    mode = "sentences", max_edit_length = max_edit_length,
+                    timeout = timeout,
+                    one_change_per_token = one_change_per_token)
+  }
+  diff_dispatch(one, old_str, new_str, format)
 }
 
 #' Diff two CSS strings
 #' @inheritParams diff_chars
-#' @return A [jsdiff_changes] object.
+#' @inherit diff_chars return
 #' @export
 diff_css <- function(old_str, new_str, ignore_case = FALSE,
                      max_edit_length = NULL, timeout = NULL,
-                     one_change_per_token = FALSE) {
+                     one_change_per_token = FALSE, format = NULL) {
   key_fun <- if (ignore_case) function(t) tolower(t) else function(t) t
-  run_string_diff(tokenize_css(old_str), tokenize_css(new_str), key_fun,
-                  mode = "css", max_edit_length = max_edit_length,
-                  timeout = timeout, one_change_per_token = one_change_per_token)
+  one <- function(a, b) {
+    run_string_diff(tokenize_css(a), tokenize_css(b), key_fun, mode = "css",
+                    max_edit_length = max_edit_length, timeout = timeout,
+                    one_change_per_token = one_change_per_token)
+  }
+  diff_dispatch(one, old_str, new_str, format)
 }

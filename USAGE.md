@@ -15,6 +15,7 @@ This document walks through every major area of the API with runnable examples.
    - [diff_trimmed_lines](#difftrimmedlines)
    - [diff_sentences](#diffsentences)
    - [diff_css](#diffcss)
+   - [Diffing columns (data.frame / data.table)](#diffing-columns-dataframe--datatable)
 2. [Array Diffs](#2-array-diffs)
 3. [JSON Diffs](#3-json-diffs)
 4. [Patch Creation](#4-patch-creation)
@@ -205,6 +206,154 @@ new_css <- "a { color: blue; font-size: 14px; font-weight: bold; }"
 diff_css(old_css, new_css)
 ```
 ![alt text](./docs/img/01_css.png)
+
+---
+
+### Diffing columns (data.frame / data.table)
+
+Every string diff function is vectorised. Given two vectors of equal length
+(or one vector and one length-1 value, which is recycled) it diffs them
+element by element and returns **one value per element**, so it can be used
+directly as a column:
+
+```r
+library(data.table)
+
+dt <- data.table(iris)
+dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)]
+#                     blah Species
+# 1: [-5-]{+3+}.[-1-]{+5+}  setosa
+# 2:          [-4.9-]{+3+}  setosa
+# 3: [-4-]{+3+}.[-7-]{+2+}  setosa
+# 4: [-4-]{+3+}.[-6-]{+1+}  setosa
+```
+
+Non-character inputs are coerced with `as.character()`, so numeric and factor
+columns work without ceremony. `NA` on either side gives `NA` out.
+
+Two length-1 strings still return a `jsdiff_changes` table, exactly as before —
+nothing about the scalar API has changed.
+
+```r
+addr <- data.table(
+  id  = 1:3,
+  old = c("12 Smith St, Carlton", "9/4 Brown Rd, Fitzroy", "71 Lygon Street"),
+  new = c("12 Smith Street, Carlton", "9/4 Browne Rd, Fitzroy", "71 Lygon Street")
+)
+
+addr[, .(id, changes = diff_words(old, new))]
+#    id                             changes
+# 1:  1  12 Smith [-St-]{+Street+}, Carlton
+# 2:  2 9/4 [-Brown-]{+Browne+} Rd, Fitzroy
+# 3:  3                     71 Lygon Street
+```
+
+#### Choosing the rendering with `format`
+
+| `format`    | Each element becomes                                                  |
+| ----------- | --------------------------------------------------------------------- |
+| `"markup"`  | inline markup (the vectorised default): `the [-cat-]{+dog+} sat`      |
+| `"ansi"`    | the coloured console form — best passed to `cat()`, see the note below |
+| `"html"`    | `<span>`-wrapped HTML for one table cell (classes from `diff_css_default()`) |
+| `"xml"`     | `<ins>` / `<del>` markup, as `convert_changes_to_xml()` produces      |
+| `"added"`   | only the inserted text, concatenated                                  |
+| `"removed"` | only the deleted text, concatenated                                   |
+| `"changes"` | no rendering: a **list column** of per-element `jsdiff_changes` tables |
+
+`"added"` / `"removed"` answer *what* changed rather than displaying it, which
+makes them handy for filtering and tabulating:
+
+```r
+addr[, .(id, added   = diff_words(old, new, format = "added"),
+             removed = diff_words(old, new, format = "removed"))]
+#    id  added removed
+# 1:  1 Street      St
+# 2:  2 Browne   Brown
+# 3:  3
+
+# keep only the rows that actually changed
+addr[diff_words(old, new, format = "removed") != "", .(id, old, new)]
+#    id                   old                      new
+# 1:  1  12 Smith St, Carlton 12 Smith Street, Carlton
+# 2:  2 9/4 Brown Rd, Fitzroy   9/4 Browne Rd, Fitzroy
+
+# tally the word substitutions across a column
+addr[, .N, by = .(from = diff_words(old, new, format = "removed"),
+                  to   = diff_words(old, new, format = "added"))][order(-N)]
+#     from     to N
+# 1:    St Street 1
+# 2: Brown Browne 1
+# 3:              1
+```
+
+`format = "changes"` keeps everything, for when a string is not enough:
+
+```r
+res <- addr[, .(id, d = diff_words(old, new, format = "changes"))]
+
+# each element is a full jsdiff_changes table (printing one collapses it to a
+# string, as always — use as.data.table() to see the rows)
+as.data.table(res$d[[1]])
+#        value added removed count
+# 1: 12 Smith  FALSE   FALSE     2
+# 2:        St FALSE    TRUE     1
+# 3:    Street  TRUE   FALSE     1
+# 4: , Carlton FALSE   FALSE     2
+
+# total tokens changed per row
+res[, n_changed := vapply(d, function(x) sum(x$count[x$added | x$removed]), integer(1))]
+res[, .(id, n_changed)]
+#    id n_changed
+# 1:  1         2
+# 2:  2         2
+# 3:  3         0
+```
+
+`format` works with length-1 inputs too, which is the easy way to get a single
+diff as a string:
+
+```r
+diff_words("the cat sat", "the dog sat", format = "markup")
+#> [1] "the [-cat-]{+dog+} sat"
+```
+
+> **ANSI in a column.** `format = "ansi"` embeds escape codes, which
+> `data.table`'s printing counts as visible characters, so columns come out
+> misaligned. Use it with `cat()`:
+>
+> ```r
+> cat(diff_words(addr$old, addr$new, format = "ansi"), sep = "\n")
+> ```
+
+#### Changing the markup markers
+
+`changes_to_markup()` is the renderer behind `format = "markup"`, and the
+markers come from two options, so they can be changed session-wide:
+
+```r
+changes_to_markup(diff_chars("abc", "abd"))
+#> [1] "ab[-c-]{+d+}"
+
+changes_to_markup(diff_chars("abc", "abd"),
+                  add = c("+[", "]"), remove = c("-[", "]"))
+#> [1] "ab-[c]+[d]"
+
+options(jsdiffr.markup_add = c("<ins>", "</ins>"),
+        jsdiffr.markup_remove = c("<del>", "</del>"))
+```
+
+#### Notes
+
+* The diff runs once per **distinct** pair of values, not once per row, so
+  repeated pairs in a long column are nearly free — which is the common case
+  for real data such as addresses, names and codes.
+* Mismatched lengths are an error (no silent partial recycling).
+* Elements whose diff was aborted by `max_edit_length` or `timeout` come back
+  as `NA`.
+* All the usual arguments (`ignore_case`, `one_change_per_token`, ...) apply
+  per element.
+* For a side-by-side view of two columns rather than a column of strings, see
+  [`diff_html`](#diffhtml--three-column-browser-view).
 
 ---
 

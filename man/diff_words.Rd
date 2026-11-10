@@ -11,11 +11,16 @@ diff_words(
   ignore_whitespace = NULL,
   max_edit_length = NULL,
   timeout = NULL,
-  one_change_per_token = FALSE
+  one_change_per_token = FALSE,
+  format = NULL
 )
 }
 \arguments{
-\item{old_str, new_str}{Length-1 character strings to compare.}
+\item{old_str, new_str}{The values to compare. Length-1 strings give a
+\link{jsdiff_changes} table; equal-length vectors (or one vector and one
+length-1 value) are diffed element-wise and give one value per element -
+see \link{vectorised-diffs}. Non-character inputs are coerced with
+\code{\link[=as.character]{as.character()}}.}
 
 \item{ignore_case}{If \code{TRUE}, characters differing only in case are treated
 as equal.}
@@ -31,9 +36,16 @@ takes longer than this.}
 
 \item{one_change_per_token}{If \code{TRUE}, emit one change object per token
 rather than coalescing runs of like changes.}
+
+\item{format}{How to render each diff: one of \code{"markup"}, \code{"ansi"},
+\code{"html"}, \code{"xml"}, \code{"added"}, \code{"removed"} or \code{"changes"}, documented in
+\link{vectorised-diffs}. The default (\code{NULL}) means \code{"changes"} for two
+length-1 inputs and \code{"markup"} otherwise.}
 }
 \value{
-A \link{jsdiff_changes} object.
+A \link{jsdiff_changes} object for two length-1 inputs with no \code{format}
+(or \code{NULL} if \code{max_edit_length}/\code{timeout} was exceeded); otherwise a vector
+as long as the recycled inputs - see \link{vectorised-diffs}.
 }
 \description{
 Whitespace is preserved in the output but ignored when deciding whether two
@@ -42,4 +54,7 @@ significant).
 }
 \examples{
 diff_words("The quick brown fox", "The slow brown fox")
+
+# as a data.frame column
+diff_words(c("the cat sat", "12 Smith St"), c("the dog sat", "12 Smith Street"))
 }

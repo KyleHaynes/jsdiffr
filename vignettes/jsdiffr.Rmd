@@ -47,6 +47,49 @@ da <- diff_arrays(c("a", "b", "c"), c("a", "c", "d"))
 da$value
 ```
 
+## Diffing columns
+
+Every string diff function is also vectorised, so it can be used as a column
+in a `data.frame` or `data.table`. Two vectors of equal length (or one vector
+and one length-1 value, which is recycled) are diffed element by element, and
+each pair is rendered to a single string:
+
+```{r}
+library(data.table)
+
+dt <- data.table(iris)
+head(dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)], 4)
+```
+
+Non-character columns are coerced with `as.character()`, and `NA` on either
+side gives `NA` out. Two length-1 strings still return a `jsdiff_changes`
+table, as above.
+
+`format` chooses the rendering. `"added"` and `"removed"` give only the
+inserted or deleted text, which is often what you want for summarising a
+column rather than displaying it:
+
+```{r}
+addr <- data.table(
+  old = c("12 Smith St, Carlton", "9/4 Brown Rd, Fitzroy", "71 Lygon Street"),
+  new = c("12 Smith Street, Carlton", "9/4 Browne Rd, Fitzroy", "71 Lygon Street")
+)
+
+addr[, .(changes = diff_words(old, new),
+         added   = diff_words(old, new, format = "added"),
+         removed = diff_words(old, new, format = "removed"))]
+```
+
+The other options are `"ansi"` (the coloured console form, best used with
+`cat()`), `"html"`, `"xml"`, and `"changes"` for a list column of the full
+change tables. `changes_to_markup()` is the renderer behind the default, and
+its markers are configurable via the `jsdiffr.markup_add` and
+`jsdiffr.markup_remove` options. See `help("vectorised-diffs")` for the
+details.
+
+The diff is computed once per *distinct* pair of values, so repeated pairs in
+a long column cost almost nothing.
+
 ## Printing and colours
 
 Printing a diff in an interactive console shows additions in green and deletions

@@ -19,6 +19,11 @@ Useful links:
 \author{
 \strong{Maintainer}: Kyle Haynes \email{kyle@kylehaynes.com.au}
 
+Authors:
+\itemize{
+  \item Kyle Haynes \email{kyle@kylehaynes.com.au}
+}
+
 Other contributors:
 \itemize{
   \item Kevin Decker (Author of the original 'jsdiff' JavaScript library (https://github.com/kpdecker/jsdiff)) [contributor, copyright holder]
