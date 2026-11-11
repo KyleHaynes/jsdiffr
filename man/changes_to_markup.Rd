@@ -38,3 +38,7 @@ changes_to_markup(diff_words("the cat sat", "the dog sat"))
 changes_to_markup(diff_chars("abc", "abd"),
                   add = c("+[", "]"), remove = c("-[", "]"))
 }
+\seealso{
+\code{\link[=markup_to_ansi]{markup_to_ansi()}} and \code{\link[=diff_print]{diff_print()}}, which turn this markup back
+into colour for the console.
+}

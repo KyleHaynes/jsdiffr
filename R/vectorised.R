@@ -35,6 +35,8 @@ diff_formats <- c("changes", "markup", "ansi", "html", "xml", "added", "removed"
 #'   session-wide.
 #' @return A length-1 character string, or `NA_character_` if `changes` is
 #'   `NULL`.
+#' @seealso [markup_to_ansi()] and [diff_print()], which turn this markup back
+#'   into colour for the console.
 #' @examples
 #' changes_to_markup(diff_words("the cat sat", "the dog sat"))
 #'
@@ -196,8 +198,9 @@ diff_dispatch <- function(one, old, new, format) {
 #'   \item{`"markup"`}{(the vectorised default) inline markup via
 #'     [changes_to_markup()], e.g. `the [-cat-]{+dog+} sat`.}
 #'   \item{`"ansi"`}{the coloured console form, as [print()] shows it. Best
-#'     passed to [cat()]; ANSI escapes confuse column-width calculations when
-#'     printed as a `data.table` column.}
+#'     passed to [cat()]: ANSI escapes do not survive [print()] at all (see
+#'     the colour section below), and they confuse column-width calculations
+#'     when printed as a `data.table` column.}
 #'   \item{`"html"`}{`<span>`-wrapped HTML for one table cell, matching the
 #'     classes in [diff_css_default()].}
 #'   \item{`"xml"`}{`<ins>`/`<del>` markup, via [convert_changes_to_xml()].}
@@ -211,11 +214,30 @@ diff_dispatch <- function(one, old, new, format) {
 #' Elements whose diff was aborted by `max_edit_length` or `timeout` are
 #' `NA_character_` (or `NULL` for `format = "changes"`).
 #'
+#' @section Colour:
+#' The default rendering is plain-text markup rather than colour because
+#' colour cannot survive ordinary printing: `print.data.table()` and
+#' `print.data.frame()` hand their formatted cells to [print.default()], which
+#' escapes the ESC byte of an ANSI sequence, so a coloured cell prints as the
+#' literal text `\033[31mcat\033[0m`. To see a table in colour, print it with
+#' [diff_print()], which does its own formatting (and measures cells by their
+#' visible width, so the columns still line up):
+#'
+#' ```r
+#' diff_print(dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)])
+#' ```
+#'
+#' [diff_print_auto()] installs that as the console's printing for tables
+#' containing diff markup, so the colour appears without wrapping each call,
+#' and [markup_to_ansi()] converts a single markup column for use with
+#' [cat()].
+#'
 #' @section Performance:
 #' The diff is computed once per *distinct* pair of values, not once per
 #' element, so repeated pairs in a long column are nearly free.
 #'
-#' @seealso [changes_to_markup()] for the markers used by `"markup"`, and
+#' @seealso [diff_print()] and [diff_print_auto()] for coloured printing,
+#'   [changes_to_markup()] for the markers used by `"markup"`, and
 #'   [diff_html()] for a side-by-side HTML table of two vectors.
 #' @name vectorised-diffs
 #' @examples
@@ -223,6 +245,7 @@ diff_dispatch <- function(one, old, new, format) {
 #' new <- c("the dog sat", "12 Smith Street", "hello")
 #'
 #' diff_words(old, new)
+#' diff_print(diff_words(old, new), color = TRUE)
 #' diff_words(old, new, format = "added")
 #'
 #' df <- data.frame(old = old, new = new)

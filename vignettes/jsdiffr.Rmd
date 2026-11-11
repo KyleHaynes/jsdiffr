@@ -99,6 +99,40 @@ in red. You can force this on or off:
 cat(format(diff_words("the cat sat", "the dog sat"), color = FALSE), "\n")
 ```
 
+A diff rendered into a column is plain-text markup rather than colour, and that
+is not a cosmetic choice: `print.data.table()` and `print.data.frame()` hand
+their formatted cells to `print.default()`, which escapes the ESC byte of an
+ANSI colour sequence. A coloured cell would print as the literal text
+`\033[31mcat\033[0m` in any terminal.
+
+Colour therefore needs a printer of its own. `diff_print()` formats the table
+itself and writes it with `cat()`, measuring each cell by its *visible* width so
+that the (zero-width) colour sequences do not pull the columns apart:
+
+```{r}
+diff_print(head(dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)], 4))
+```
+
+Colour is off here because this vignette is not a terminal, so the markers are
+left in place; at a console the same call prints the deletions in red and the
+insertions in green instead. `diff_print()` also takes a `data.frame`, a markup
+column on its own, and a list column from `format = "changes"`.
+
+To avoid wrapping every call, `diff_print_auto()` defines `print.data.table()`
+and `print.data.frame()` in the global environment - which is what takes
+precedence when the console auto-prints - sending tables that contain diff
+markup to `diff_print()` and everything else to the method that would otherwise
+have run:
+
+```r
+diff_print_auto()
+dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)]  # coloured
+diff_print_auto(FALSE)                                          # undo
+```
+
+`markup_to_ansi()` is the piece underneath, for when you want to colour a
+markup column and print it yourself with `cat()`.
+
 ## Patches
 
 The full unified-diff patch suite is available:

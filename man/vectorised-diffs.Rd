@@ -29,8 +29,9 @@ according to \code{format}:
 \item{\code{"markup"}}{(the vectorised default) inline markup via
 \code{\link[=changes_to_markup]{changes_to_markup()}}, e.g. \verb{the [-cat-]\{+dog+\} sat}.}
 \item{\code{"ansi"}}{the coloured console form, as \code{\link[=print]{print()}} shows it. Best
-passed to \code{\link[=cat]{cat()}}; ANSI escapes confuse column-width calculations when
-printed as a \code{data.table} column.}
+passed to \code{\link[=cat]{cat()}}: ANSI escapes do not survive \code{\link[=print]{print()}} at all (see
+the colour section below), and they confuse column-width calculations
+when printed as a \code{data.table} column.}
 \item{\code{"html"}}{\verb{<span>}-wrapped HTML for one table cell, matching the
 classes in \code{\link[=diff_css_default]{diff_css_default()}}.}
 \item{\code{"xml"}}{\verb{<ins>}/\verb{<del>} markup, via \code{\link[=convert_changes_to_xml]{convert_changes_to_xml()}}.}
@@ -45,6 +46,25 @@ Elements whose diff was aborted by \code{max_edit_length} or \code{timeout} are
 \code{NA_character_} (or \code{NULL} for \code{format = "changes"}).
 }
 
+\section{Colour}{
+
+The default rendering is plain-text markup rather than colour because
+colour cannot survive ordinary printing: \code{print.data.table()} and
+\code{print.data.frame()} hand their formatted cells to \code{\link[=print.default]{print.default()}}, which
+escapes the ESC byte of an ANSI sequence, so a coloured cell prints as the
+literal text \verb{\\033[31mcat\\033[0m}. To see a table in colour, print it with
+\code{\link[=diff_print]{diff_print()}}, which does its own formatting (and measures cells by their
+visible width, so the columns still line up):
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{diff_print(dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)])
+}\if{html}{\out{</div>}}
+
+\code{\link[=diff_print_auto]{diff_print_auto()}} installs that as the console's printing for tables
+containing diff markup, so the colour appears without wrapping each call,
+and \code{\link[=markup_to_ansi]{markup_to_ansi()}} converts a single markup column for use with
+\code{\link[=cat]{cat()}}.
+}
+
 \section{Performance}{
 
 The diff is computed once per \emph{distinct} pair of values, not once per
@@ -56,6 +76,7 @@ old <- c("the cat sat", "12 Smith St", "hello")
 new <- c("the dog sat", "12 Smith Street", "hello")
 
 diff_words(old, new)
+diff_print(diff_words(old, new), color = TRUE)
 diff_words(old, new, format = "added")
 
 df <- data.frame(old = old, new = new)
@@ -66,6 +87,7 @@ df
 diff_chars(c("abc", "abd", "xbc"), "abc")
 }
 \seealso{
+\code{\link[=diff_print]{diff_print()}} and \code{\link[=diff_print_auto]{diff_print_auto()}} for coloured printing,
 \code{\link[=changes_to_markup]{changes_to_markup()}} for the markers used by \code{"markup"}, and
 \code{\link[=diff_html]{diff_html()}} for a side-by-side HTML table of two vectors.
 }

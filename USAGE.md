@@ -253,7 +253,7 @@ addr[, .(id, changes = diff_words(old, new))]
 | `format`    | Each element becomes                                                  |
 | ----------- | --------------------------------------------------------------------- |
 | `"markup"`  | inline markup (the vectorised default): `the [-cat-]{+dog+} sat`      |
-| `"ansi"`    | the coloured console form — best passed to `cat()`, see the note below |
+| `"ansi"`    | the coloured console form — for `cat()`, see [Colour in the console](#colour-in-the-console) |
 | `"html"`    | `<span>`-wrapped HTML for one table cell (classes from `diff_css_default()`) |
 | `"xml"`     | `<ins>` / `<del>` markup, as `convert_changes_to_xml()` produces      |
 | `"added"`   | only the inserted text, concatenated                                  |
@@ -317,13 +317,75 @@ diff_words("the cat sat", "the dog sat", format = "markup")
 #> [1] "the [-cat-]{+dog+} sat"
 ```
 
-> **ANSI in a column.** `format = "ansi"` embeds escape codes, which
-> `data.table`'s printing counts as visible characters, so columns come out
-> misaligned. Use it with `cat()`:
->
-> ```r
-> cat(diff_words(addr$old, addr$new, format = "ansi"), sep = "\n")
-> ```
+#### Colour in the console
+
+The default rendering is plain-text markup, not colour, because colour cannot
+survive ordinary printing. `print.data.table()` and `print.data.frame()` format
+their cells and hand them to `print.default()`, which **escapes** the ESC byte
+of an ANSI sequence — so a coloured cell prints as the literal text
+`\033[31mSt\033[0m` in every terminal, and the escape bytes are counted as
+visible characters when the column width is worked out.
+
+`diff_print()` is the way around that: it formats the table itself and writes it
+with `cat()`, measuring every cell by its *visible* width so the columns line up
+around the zero-width colour sequences.
+
+```r
+diff_print(addr[, .(id, changes = diff_words(old, new))])
+#    id  changes
+# 1:  1  12 Smith Street, Carlton     <- "St" red, "Street" green
+# 2:  2  9/4 BrownBrowne Rd, Fitzroy
+# 3:  3  71 Lygon Street
+```
+
+It takes a `data.frame` or `data.table`, a markup column on its own, a list
+column from `format = "changes"`, or a single `jsdiff_changes` object:
+
+```r
+diff_print(diff_words(addr$old, addr$new))        # one coloured line per element
+diff_print(diff_words(addr$old[1], addr$new[1]))  # a single diff
+```
+
+Useful arguments: `color` forces colour on or off (with it off the markup is
+printed as it stands), `cols` names the columns to treat as markup instead of
+detecting them, and `nrows` / `topn` control truncation of long tables (the
+default shows the first and last 5 rows of anything longer than 100).
+
+To make this the console's default, `diff_print_auto()` defines
+`print.data.table()` and `print.data.frame()` in the global environment —
+methods there take precedence over the ones the packages register, which is the
+only hook into auto-printing. Tables containing diff markup go to
+`diff_print()`; everything else is passed to the method that would otherwise
+have run, so nothing else about printing changes.
+
+```r
+diff_print_auto()
+#> Defined print.data.table, print.data.frame in the global environment; ...
+
+dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)]   # coloured
+iris                                                             # untouched
+
+diff_print_auto(FALSE)   # removes them again (only ever its own)
+```
+
+Being a change to the user's workspace, it is never enabled by the package
+itself — call it interactively or from `.Rprofile`.
+
+`markup_to_ansi()` is the renderer underneath, for printing a column yourself:
+
+```r
+cat(markup_to_ansi(diff_words(addr$old, addr$new)), sep = "\n")
+```
+
+and `has_markup()` reports whether a vector or table holds any markup, which is
+what `diff_print()` and the wrappers use to decide.
+
+`format = "ansi"` renders each element to the coloured form directly, which is
+equivalent for printing with `cat()`:
+
+```r
+cat(diff_words(addr$old, addr$new, format = "ansi"), sep = "\n")
+```
 
 #### Changing the markup markers
 
@@ -342,6 +404,10 @@ options(jsdiffr.markup_add = c("<ins>", "</ins>"),
         jsdiffr.markup_remove = c("<del>", "</del>"))
 ```
 
+`markup_to_ansi()`, `has_markup()` and `diff_print()` read the same two
+options, so custom markers keep working in colour; each also takes `add` /
+`remove` directly.
+
 #### Notes
 
 * The diff runs once per **distinct** pair of values, not once per row, so
@@ -354,6 +420,9 @@ options(jsdiffr.markup_add = c("<ins>", "</ins>"),
   per element.
 * For a side-by-side view of two columns rather than a column of strings, see
   [`diff_html`](#diffhtml--three-column-browser-view).
+* Printing a table in colour needs `diff_print()`, and `diff_print_auto()` to
+  have the console do it by itself — see
+  [Colour in the console](#colour-in-the-console).
 
 ---
 

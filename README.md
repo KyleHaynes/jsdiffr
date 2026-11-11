@@ -91,6 +91,38 @@ repeated pairs in a long column are nearly free. See
 [USAGE.md](./USAGE.md#diffing-columns-dataframe--datatable) for the full
 treatment, and `help("vectorised-diffs")` in R.
 
+### Colour in a table
+
+The default rendering is plain-text markup because colour cannot survive
+ordinary printing: `print.data.table()` and `print.data.frame()` hand their
+formatted cells to `print.default()`, which escapes the ESC byte of an ANSI
+sequence, so a coloured cell prints as the literal text `\033[31mcat\033[0m`.
+`diff_print()` does the formatting itself and writes it with `cat()`, measuring
+every cell by its *visible* width so that the columns still line up:
+
+```r
+diff_print(dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)])
+#     blah   Species
+# 1:  53.15  setosa     <- 5 and 1 in red, 3 and 5 in green
+# 2:  4.93   setosa
+# 3:  43.72  setosa
+# 4:  43.61  setosa
+```
+
+`diff_print_auto()` makes that the console's printing for any table holding
+diff markup, so the colour shows without wrapping each call. It defines
+`print.data.table()` and `print.data.frame()` in the global environment (where
+they take precedence over the packages' own methods, which is the only way to
+hook auto-printing) and delegates anything without markup to them;
+`diff_print_auto(FALSE)` removes them again.
+
+```r
+diff_print_auto()
+dt[, .(blah = diff_chars(Sepal.Length, Sepal.Width), Species)]  # now coloured
+```
+
+`markup_to_ansi()` converts a markup column on its own, for `cat()`.
+
 ## HTML output and Shiny
 
 `diff_to_html()` renders a diff as HTML spans (`.jsdiff-added` / `.jsdiff-removed`),
